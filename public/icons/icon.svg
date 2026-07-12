@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="Reboot Performance">
+  <rect width="512" height="512" rx="120" fill="#0c0b09"/>
+  <circle cx="256" cy="256" r="154" fill="none" stroke="#c99b55" stroke-width="24"/>
+  <path d="M174 282c35 56 129 56 164 0" fill="none" stroke="#f4eadb" stroke-width="24" stroke-linecap="round"/>
+  <path d="M176 214h160" stroke="#c99b55" stroke-width="24" stroke-linecap="round"/>
+  <path d="M256 116v280" stroke="#f4eadb" stroke-width="18" stroke-linecap="round" opacity=".72"/>
+</svg>

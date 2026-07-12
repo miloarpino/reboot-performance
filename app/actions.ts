@@ -65,6 +65,7 @@ export async function createClientAction(formData: FormData) {
   });
 
   revalidatePath("/coach");
+  revalidatePath("/client");
 }
 
 export async function updateAssessmentAction(formData: FormData) {
@@ -125,6 +126,7 @@ export async function updateAssessmentAction(formData: FormData) {
   });
 
   revalidatePath("/coach");
+  revalidatePath("/client");
 }
 
 export async function assignWorkoutAction(formData: FormData) {
@@ -163,6 +165,7 @@ export async function assignWorkoutAction(formData: FormData) {
   });
 
   revalidatePath("/coach");
+  revalidatePath("/client");
 }
 
 export async function updateNutritionAction(formData: FormData) {
@@ -190,6 +193,7 @@ export async function updateNutritionAction(formData: FormData) {
   });
 
   revalidatePath("/coach");
+  revalidatePath("/client");
 }
 
 export async function createAiRecommendationAction(formData: FormData) {
@@ -306,6 +310,7 @@ export async function decideAiRecommendationAction(formData: FormData) {
   });
 
   revalidatePath("/coach");
+  revalidatePath("/client");
 }
 
 export async function applyAiRecommendationAction(formData: FormData) {
@@ -564,6 +569,7 @@ export async function duplicatePublicationAction(formData: FormData) {
   });
 
   revalidatePath("/coach");
+  revalidatePath("/client");
 }
 
 function splitList(value: string) {

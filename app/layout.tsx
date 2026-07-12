@@ -4,7 +4,17 @@ import "./globals.css";
 
 export const metadata: Metadata = {
   title: "Reboot Performance",
-  description: "Application premium de coaching sportif, nutritionnel et performance."
+  description: "Application premium de coaching sportif, nutritionnel et performance.",
+  manifest: "/manifest.webmanifest",
+  appleWebApp: {
+    capable: true,
+    title: "Reboot Performance",
+    statusBarStyle: "black-translucent"
+  },
+  icons: {
+    icon: "/icons/icon.svg",
+    apple: "/icons/icon.svg"
+  }
 };
 
 export const viewport: Viewport = {

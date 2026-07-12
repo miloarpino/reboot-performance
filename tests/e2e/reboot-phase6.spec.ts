@@ -106,6 +106,36 @@ test("parcours client: dashboard, nutrition, recettes, programme, messages et se
   await logout(page);
 });
 
+test("PWA et detection douce de nouvelle version", async ({ page }) => {
+  await page.route("**/api/version", async (route) => {
+    await route.fulfill({
+      contentType: "application/json",
+      body: JSON.stringify({ version: "version-b" })
+    });
+  });
+
+  await login(page, clientEmail);
+  await expect(page).toHaveURL(/\/client/);
+  const manifest = await page.request.get("/manifest.webmanifest");
+  expect(manifest.ok()).toBeTruthy();
+
+  await page.evaluate(() => window.localStorage.setItem("reboot.version", "version-a"));
+  await page.evaluate(() => window.dispatchEvent(new Event("reboot:check-version")));
+  await expect(page.getByText("Une nouvelle version de Reboot Performance est disponible")).toBeVisible();
+  await expect(page.getByRole("button", { name: "Mettre a jour" })).toBeVisible();
+  await logout(page);
+});
+
+test("perte puis retour reseau affiche l'etat temps reel", async ({ page }) => {
+  await login(page, clientEmail);
+  await expect(page).toHaveURL(/\/client/);
+  await page.evaluate(() => window.dispatchEvent(new Event("offline")));
+  await expect(page.getByText("Hors ligne")).toBeVisible();
+  await page.evaluate(() => window.dispatchEvent(new Event("online")));
+  await expect(page.getByText(/Connexion temps reel|Synchronise/)).toBeVisible();
+  await logout(page);
+});
+
 for (const width of [320, 375, 390, 430, 768, 1024, 1440]) {
   test(`responsive sans scroll horizontal a ${width}px`, async ({ page }) => {
     await page.setViewportSize({ width, height: 900 });

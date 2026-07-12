@@ -659,6 +659,53 @@ textarea:focus-visible {
   padding: 7px 10px;
 }
 
+.live-status {
+  position: fixed;
+  right: 18px;
+  bottom: 18px;
+  z-index: 40;
+  min-height: 34px;
+  padding: 7px 12px;
+  border: 1px solid var(--reboot-border);
+  border-radius: 999px;
+  background: var(--reboot-glass);
+  color: var(--reboot-muted);
+  box-shadow: var(--reboot-shadow-soft);
+  backdrop-filter: blur(18px);
+  font-size: 0.82rem;
+  font-weight: 800;
+}
+
+.live-status.online {
+  color: var(--reboot-success);
+}
+
+.live-status.offline {
+  color: var(--reboot-danger);
+}
+
+.version-toast {
+  position: fixed;
+  right: 18px;
+  bottom: 64px;
+  z-index: 45;
+  display: flex;
+  max-width: min(420px, calc(100vw - 36px));
+  align-items: center;
+  gap: 12px;
+  padding: 12px;
+  border: 1px solid color-mix(in srgb, var(--reboot-gold) 28%, var(--reboot-border));
+  border-radius: 20px;
+  background: var(--reboot-glass);
+  box-shadow: var(--reboot-shadow);
+  backdrop-filter: blur(22px);
+}
+
+.version-toast span {
+  color: var(--reboot-text);
+  font-weight: 760;
+}
+
 .muted {
   color: var(--reboot-muted);
 }
@@ -930,6 +977,17 @@ h3 {
   .hero,
   .auth-panel {
     border-radius: 14px;
+  }
+
+  .live-status {
+    right: 12px;
+    bottom: 12px;
+  }
+
+  .version-toast {
+    right: 12px;
+    bottom: 58px;
+    display: grid;
   }
 
   .command-hero {

@@ -1,6 +1,8 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
+import { createSupabaseBrowserClient } from "../lib/supabase/client";
 import {
   archivePublicationAction,
   analyzeAllClientsWithAiAction,
@@ -25,6 +27,7 @@ type ThemeChoice = "light" | "dark" | "system";
 type CoachSection = "home" | "clients" | "ai" | "contents" | "notifications";
 type ClientSection = "home" | "contents" | "nutrition" | "program" | "messages";
 type ClientTab = "summary" | "assessment" | "nutrition" | "training" | "progress" | "messages" | "history";
+type LiveStatus = "connecting" | "online" | "offline";
 
 const coachNav: Array<{ id: CoachSection; label: string; title: string; subtitle: string }> = [
   { id: "home", label: "Accueil", title: "Centre de pilotage", subtitle: "Les priorites utiles maintenant, rien de plus." },
@@ -110,6 +113,7 @@ export function CoachSupabaseApp({ profile, data }: { profile: any; data: any })
 
   return (
     <main className="app-shell">
+      <LiveUpdateBridge profile={profile} data={data} />
       <aside className="sidebar">
         <div className="brand">
           <strong>Reboot Performance</strong>
@@ -597,6 +601,7 @@ export function ClientSupabaseApp({ profile, data }: { profile: any; data: any }
 
   return (
     <main className="app-shell">
+      <LiveUpdateBridge profile={profile} data={data} />
       <aside className="sidebar">
         <div className="brand"><strong>Reboot Performance</strong><span className="muted small">Espace client</span></div>
         <nav className="nav" aria-label="Navigation client">
@@ -753,6 +758,140 @@ function ThemeSwitcher() {
       <button className={theme === "dark" ? "active" : ""} type="button" onClick={() => choose("dark")}>Sombre</button>
       <button className={theme === "system" ? "active" : ""} type="button" onClick={() => choose("system")}>Systeme</button>
     </div>
+  );
+}
+
+function LiveUpdateBridge({ profile, data }: { profile: any; data: any }) {
+  const router = useRouter();
+  const [status, setStatus] = useState<LiveStatus>("connecting");
+  const [hasNewVersion, setHasNewVersion] = useState(false);
+  const [activeVersion, setActiveVersion] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!profile?.id) return;
+    const supabase = createSupabaseBrowserClient();
+    const clientIds = profile.role === "coach"
+      ? (data.clients || []).map((client: any) => client.id).filter(Boolean)
+      : [profile.id];
+    const channels: ReturnType<typeof supabase.channel>[] = [];
+    let refreshTimer: ReturnType<typeof setTimeout> | null = null;
+
+    const refreshSoon = () => {
+      if (refreshTimer) clearTimeout(refreshTimer);
+      refreshTimer = setTimeout(() => router.refresh(), 450);
+    };
+
+    const subscribe = (topic: string, handlers: Array<{ table: string; filter?: string }>) => {
+      const channel = supabase.channel(topic);
+      for (const handler of handlers) {
+        channel.on(
+          "postgres_changes",
+          { event: "*", schema: "public", table: handler.table, filter: handler.filter },
+          refreshSoon
+        );
+      }
+      channel.subscribe((nextStatus) => {
+        if (nextStatus === "SUBSCRIBED") setStatus("online");
+        if (["CHANNEL_ERROR", "TIMED_OUT", "CLOSED"].includes(nextStatus)) setStatus("offline");
+      });
+      channels.push(channel);
+    };
+
+    const scopedTables = [
+      "nutrition_targets",
+      "workouts",
+      "workout_assignments",
+      "notifications",
+      "recipe_assignments",
+      "user_badges",
+      "challenges",
+      "ai_recommendations"
+    ];
+
+    if (profile.role === "coach") {
+      for (const clientId of clientIds) {
+        subscribe(`coach-${profile.id}-client-${clientId}`, scopedTables.map((table) => ({ table, filter: `client_id=eq.${clientId}` })));
+      }
+      subscribe(`coach-${profile.id}-direct`, [
+        { table: "messages", filter: `recipient_id=eq.${profile.id}` },
+        { table: "messages", filter: `sender_id=eq.${profile.id}` },
+        { table: "contents", filter: `coach_id=eq.${profile.id}` },
+        { table: "publication_targets" },
+        { table: "ai_recommendations", filter: `coach_id=eq.${profile.id}` }
+      ]);
+    } else {
+      subscribe(`client-${profile.id}-own`, scopedTables.map((table) => ({ table, filter: `client_id=eq.${profile.id}` })));
+      subscribe(`client-${profile.id}-messages`, [
+        { table: "messages", filter: `recipient_id=eq.${profile.id}` },
+        { table: "messages", filter: `sender_id=eq.${profile.id}` },
+        { table: "contents" },
+        { table: "publication_targets" }
+      ]);
+    }
+
+    const onOnline = () => {
+      setStatus("connecting");
+      router.refresh();
+    };
+    const onOffline = () => setStatus("offline");
+    window.addEventListener("online", onOnline);
+    window.addEventListener("offline", onOffline);
+
+    return () => {
+      if (refreshTimer) clearTimeout(refreshTimer);
+      window.removeEventListener("online", onOnline);
+      window.removeEventListener("offline", onOffline);
+      for (const channel of channels) supabase.removeChannel(channel);
+    };
+  }, [data.clients, profile?.id, profile?.role, router]);
+
+  useEffect(() => {
+    if (!("serviceWorker" in navigator)) return;
+    navigator.serviceWorker.register("/sw.js").catch(() => undefined);
+  }, []);
+
+  useEffect(() => {
+    let cancelled = false;
+    async function checkVersion() {
+      try {
+        const response = await fetch("/api/version", { cache: "no-store" });
+        const payload = await response.json();
+        if (cancelled || !payload?.version) return;
+        const storedVersion = window.localStorage.getItem("reboot.version");
+        if (storedVersion && storedVersion !== payload.version) setHasNewVersion(true);
+        window.localStorage.setItem("reboot.version", payload.version);
+        setActiveVersion((current) => {
+          if (current && current !== payload.version) setHasNewVersion(true);
+          return current || payload.version;
+        });
+      } catch {
+        // La detection de version reste silencieuse hors ligne.
+      }
+    }
+    checkVersion();
+    window.addEventListener("focus", checkVersion);
+    window.addEventListener("reboot:check-version", checkVersion);
+    const timer = window.setInterval(checkVersion, 60000);
+    return () => {
+      cancelled = true;
+      window.removeEventListener("focus", checkVersion);
+      window.removeEventListener("reboot:check-version", checkVersion);
+      window.clearInterval(timer);
+    };
+  }, []);
+
+  return (
+    <>
+      <div className={`live-status ${status}`} role="status" aria-live="polite">
+        {status === "online" ? "Synchronise" : status === "connecting" ? "Connexion temps reel" : "Hors ligne"}
+      </div>
+      {hasNewVersion ? (
+        <div className="version-toast" role="status" aria-live="polite">
+          <span>Une nouvelle version de Reboot Performance est disponible</span>
+          <button className="primary" type="button" onClick={() => window.location.reload()}>Mettre a jour</button>
+        </div>
+      ) : null}
+    </>
   );
 }
 
