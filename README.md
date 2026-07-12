@@ -56,7 +56,7 @@ npm run supabase:phase5
 npm run test:e2e
 npm run security:audit
 npm audit --omit=dev
-npm run next:build
+npm run build
 ```
 
 ## Comptes de test
@@ -82,7 +82,7 @@ npm run supabase:phase5
 npm run supabase:phase4
 npm run supabase:smoke
 npm test
-npm run next:build
+npm run build
 ```
 
 Ces commandes doivent rester vertes avant de passer a une phase suivante.

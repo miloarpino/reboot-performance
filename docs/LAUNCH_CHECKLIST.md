@@ -4,7 +4,7 @@ Checklist Phase 6 pour preparer une premiere mise en ligne test sans casser les 
 
 ## 1. Application
 
-- [ ] `npm run next:build` passe sans erreur.
+- [ ] `npm run build` passe sans erreur et genere `.next`.
 - [ ] `npm run test:e2e` passe avec les comptes de test.
 - [ ] `npm run security:audit` ne detecte aucun secret versionnable.
 - [ ] `npm audit --omit=dev` retourne `found 0 vulnerabilities`.
@@ -95,5 +95,5 @@ npm run supabase:smoke
 npm test
 npm run test:e2e
 npm run security:audit
-npm run next:build
+npm run build
 ```

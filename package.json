@@ -5,10 +5,9 @@
   "type": "module",
   "scripts": {
     "dev": "next dev",
-    "build": "node scripts/build.mjs",
+    "build": "next build",
     "test": "node scripts/test.mjs",
     "test:e2e": "playwright test",
-    "next:build": "next build",
     "security:audit": "node scripts/secret-audit.mjs",
     "supabase:seed": "node scripts/seed-supabase.mjs",
     "supabase:smoke": "node scripts/supabase-smoke-test.mjs",
@@ -18,7 +17,7 @@
   "dependencies": {
     "@supabase/ssr": "^0.6.1",
     "@supabase/supabase-js": "^2.45.4",
-    "next": "^16.2.10",
+    "next": "15.5.20",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
     "zod": "^4.4.3"

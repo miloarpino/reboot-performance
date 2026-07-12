@@ -14,7 +14,7 @@ npm test
 npm run test:e2e
 npm run security:audit
 npm audit --omit=dev
-npm run next:build
+npm run build
 ```
 
 Tout doit etre vert avant de continuer.
@@ -45,7 +45,7 @@ Ne jamais pousser `.env.local`.
 2. Cliquer sur `Add New Project`.
 3. Importer le depot GitHub `reboot-performance`.
 4. Framework detecte : Next.js.
-5. Garder la commande build : `npm run next:build`.
+5. Garder la commande build : `npm run build`, qui lance `next build`.
 
 ## 5. Ajouter les variables d'environnement Vercel
 
