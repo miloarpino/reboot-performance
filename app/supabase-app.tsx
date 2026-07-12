@@ -130,19 +130,12 @@ export function CoachSupabaseApp({ profile, data }: { profile: any; data: any })
         <PageHeader eyebrow="Coach connecte" title={activeMeta.title} subtitle={activeMeta.subtitle} />
 
         {active === "home" ? (
-          <section className="page-panel grid" aria-label="Accueil coach">
-            {kpi("Actions urgentes", urgentAi.length + painAssessments.length, "clients a surveiller")}
-            {kpi("Nouveaux bilans", recentAssessments.length, "7 derniers jours")}
-            {kpi("Douleurs", painAssessments.length, "a verifier")}
-            {kpi("Actions IA", pendingAi.length, "en attente")}
-            {kpi("Programmes", scheduledContents.length, "contenus programmes")}
-            {kpi("Notifications", unreadNotifications.length, "non lues")}
-            <article className="panel span-12 stack">
-              <div className="row between">
-                <div>
-                  <h2>Bonjour {profile.first_name}</h2>
-                  <p className="muted">Ouvrez une seule zone a la fois. Les raccourcis ci-dessous changent de rubrique.</p>
-                </div>
+          <section className="page-panel command-center" aria-label="Accueil coach">
+            <article className="command-hero panel stack">
+              <span className="pill gold">Club prive</span>
+              <div>
+                <h2>Bonjour {profile.first_name}</h2>
+                <p className="muted">Voici les priorites de la journee. Les actions visibles ci-dessous ouvrent directement la bonne rubrique.</p>
               </div>
               <div className="quick-actions" aria-label="Raccourcis coach">
                 <button className="primary" type="button" onClick={() => setActive("ai")}>Valider l'IA</button>
@@ -151,6 +144,24 @@ export function CoachSupabaseApp({ profile, data }: { profile: any; data: any })
                 <button className="ghost" type="button" onClick={() => setActive("notifications")}>Voir les alertes</button>
               </div>
             </article>
+            <section className="priority-strip" aria-label="Resume de la journee">
+            {kpi("Actions urgentes", urgentAi.length + painAssessments.length, "clients a surveiller")}
+            {kpi("Nouveaux bilans", recentAssessments.length, "7 derniers jours")}
+            {kpi("Actions IA", pendingAi.length, "en attente")}
+            {kpi("Programmes", scheduledContents.length, "contenus programmes")}
+            </section>
+            <section className="priority-grid">
+              <article className="priority-card panel">
+                <span className="pill gold">Alertes clients</span>
+                <strong>{painAssessments.length} dossier(s) a verifier</strong>
+                <p className="muted">Douleurs, blessures ou baisse de recuperation.</p>
+              </article>
+              <article className="priority-card panel">
+                <span className="pill gold">Notifications</span>
+                <strong>{unreadNotifications.length} non lue(s)</strong>
+                <p className="muted">Les alertes restent separees pour eviter le bruit.</p>
+              </article>
+            </section>
           </section>
         ) : null}
 
@@ -194,12 +205,21 @@ export function CoachSupabaseApp({ profile, data }: { profile: any; data: any })
               </aside>
 
               {selectedClient ? (
-                <section className="panel stack">
-                  <div className="row between">
-                    <div>
-                      <span className="pill gold">{selectedAssessment?.formula || "profil"}</span>
+                <section className="panel stack client-dossier">
+                  <div className="client-profile-header">
+                    <div className="client-avatar" aria-hidden="true">{initials(selectedClient)}</div>
+                    <div className="client-profile-main">
+                      <div className="row">
+                        <span className="pill gold">{selectedAssessment?.formula || "profil"}</span>
+                        <span className="pill">{painAssessments.some((item: any) => item.client_id === selectedClient.id) ? "Alerte" : "Stable"}</span>
+                      </div>
                       <h2>{selectedClient.first_name} {selectedClient.last_name}</h2>
                       <p className="muted">{selectedAssessment?.goal || selectedClient.objective || "Objectif non renseigne"}</p>
+                    </div>
+                    <div className="client-progress-card">
+                      <span className="muted small">Progression</span>
+                      <strong>{selectedWorkouts.filter((workout: any) => workout.status === "completed").length}/{selectedWorkouts.length || 0}</strong>
+                      <span className="muted small">seances terminees</span>
                     </div>
                   </div>
                   <div className="tabs" role="tablist" aria-label="Fiche client">
@@ -449,8 +469,8 @@ function ClientDetailTab({ tab, client, assessment, nutrition, workouts, message
 
 function AiRecommendationCard({ recommendation }: { recommendation: any }) {
   return (
-    <article className="list-item stack">
-      <div className="row between">
+    <article className="list-item stack ai-card">
+      <div className="row between ai-card-top">
         <div>
           <span className="pill gold">{recommendation.priority}</span>
           <h3>{recommendation.type} - {recommendation.problem}</h3>
@@ -469,6 +489,7 @@ function AiRecommendationCard({ recommendation }: { recommendation: any }) {
           <textarea name="coachEdit" rows={3} placeholder='{"calories": 1900, "protein": 135}' />
         </label>
         <label className="span-4">Note coach <input name="note" placeholder="Decision Milo" /></label>
+        <button className="ghost span-3" name="decision" value="approve">Modifier</button>
         <button className="primary span-3" name="decision" value="approve">Valider</button>
         <button className="ghost span-3" name="decision" value="postpone">Reporter</button>
         <button className="danger span-3" name="decision" value="reject">Refuser</button>
@@ -663,8 +684,10 @@ export function ClientSupabaseApp({ profile, data }: { profile: any; data: any }
                       <span>{recipe.fat} L</span>
                     </div>
                     <p className="muted small">{recipe.prep_minutes} min prep - {recipe.cook_minutes} min cuisson - {recipe.difficulty}</p>
-                    <p>{recipe.coach_tip}</p>
-                    <span className="pill gold">{assignments.has(recipe.id) ? "Envoyee par le coach" : "Compatible"}</span>
+                    <div className="recipe-detail">
+                      <p>{recipe.coach_tip}</p>
+                      <span className="pill gold">{assignments.has(recipe.id) ? "Envoyee par le coach" : "Adapte a votre objectif"}</span>
+                    </div>
                   </div>
                 </article>
               ))}
@@ -782,6 +805,10 @@ function EmptyState({ title, text }: { title: string; text: string }) {
 
 function kpi(label: string, value: any, hint: string) {
   return <article className="kpi span-3"><span className="muted small">{label}</span><strong>{value}</strong><span className="muted small">{hint}</span></article>;
+}
+
+function initials(client: any) {
+  return `${client?.first_name?.[0] || ""}${client?.last_name?.[0] || ""}`.toUpperCase() || "RP";
 }
 
 function targetSummary(targets: any[]) {
