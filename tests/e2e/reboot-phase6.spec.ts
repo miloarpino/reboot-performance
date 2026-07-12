@@ -1,0 +1,114 @@
+import { expect, test, type Page } from "@playwright/test";
+import { readFileSync } from "node:fs";
+import path from "node:path";
+
+const password = process.env.SEED_PASSWORD || readLocalEnv("SEED_PASSWORD");
+const coachEmail = "coach.milo@reboot.test";
+const clientEmail = "cliente.perte@reboot.test";
+
+test.skip(!password, "SEED_PASSWORD is required for E2E tests.");
+
+async function login(page: Page, email: string) {
+  await page.goto("/login");
+  await page.getByLabel("Email").fill(email);
+  await page.getByLabel("Mot de passe").fill(password!);
+  await page.getByRole("button", { name: "Se connecter" }).click();
+}
+
+async function logout(page: Page) {
+  await page.getByRole("button", { name: "Se deconnecter" }).click();
+  await expect(page).toHaveURL(/\/login/);
+}
+
+async function expectNoHorizontalScroll(page: Page) {
+  await page.waitForLoadState("networkidle");
+  const overflow = await page.evaluate(() => {
+    const root = document.scrollingElement || document.documentElement || document.body;
+    return root ? root.scrollWidth - window.innerWidth : 0;
+  });
+  expect(overflow).toBeLessThanOrEqual(1);
+}
+
+test("mauvaise connexion, connexion coach, navigation coach et deconnexion", async ({ page }) => {
+  await page.goto("/login");
+  await page.getByLabel("Email").fill(coachEmail);
+  await page.getByLabel("Mot de passe").fill("mot-de-passe-invalide");
+  await page.getByRole("button", { name: "Se connecter" }).click();
+  await expect(page.getByText("Email ou mot de passe incorrect")).toBeVisible();
+
+  await login(page, coachEmail);
+  await expect(page).toHaveURL(/\/coach/);
+  await expect(page.getByRole("heading", { name: /Bonjour/ })).toBeVisible();
+  await expect(page.getByRole("navigation")).toContainText("Accueil");
+  await expect(page.getByRole("navigation")).toContainText("Clients");
+  await expect(page.getByRole("navigation")).toContainText("Agent IA");
+  await expect(page.getByRole("navigation")).toContainText("Contenus");
+  await expect(page.getByRole("navigation")).toContainText("Notifications");
+  await expect(page.getByRole("heading", { name: "Fiche client" })).toBeVisible();
+  await logout(page);
+});
+
+test("parcours coach: bilan, nutrition, seance, IA et contenu restent fonctionnels", async ({ page }) => {
+  await login(page, coachEmail);
+  await expect(page).toHaveURL(/\/coach/);
+
+  await page.getByLabel("Objectif", { exact: true }).fill("Phase 6 E2E - objectif controle");
+  await page.getByRole("button", { name: "Enregistrer le bilan" }).click();
+  await expect(page.getByLabel("Objectif", { exact: true })).toHaveValue("Phase 6 E2E - objectif controle");
+
+  await page.getByLabel("Calories").fill("1990");
+  await page.getByRole("button", { name: "Modifier la nutrition" }).click();
+  await expect(page.getByLabel("Calories")).toHaveValue("1990");
+
+  const title = `Seance E2E ${Date.now()}`;
+  const workoutSection = page.locator("section").filter({ has: page.getByRole("heading", { name: "Seances", exact: true }) }).last();
+  await workoutSection.getByLabel("Titre").fill(title);
+  await workoutSection.getByLabel("Date").fill(new Date().toISOString().slice(0, 10));
+  await workoutSection.getByRole("button", { name: "Attribuer la seance" }).click();
+  await expect(page.getByText(title)).toBeVisible();
+
+  await page.getByRole("button", { name: "Analyser ce client" }).click();
+  await expect(page.getByText(/adherence|attention prioritaire|suivi stable/i).first()).toBeVisible();
+
+  const contentSection = page.locator("section").filter({ has: page.getByRole("heading", { name: "Contenus", exact: true }) }).last();
+  await contentSection.getByLabel("Titre").fill(`Contenu E2E ${Date.now()}`);
+  await contentSection.getByLabel("Contenu").fill("Message de test E2E visible uniquement selon ciblage.");
+  await contentSection.getByRole("button", { name: "Enregistrer brouillon" }).click();
+  await expect(page.getByText("Message de test E2E visible uniquement selon ciblage.").first()).toBeVisible();
+
+  await logout(page);
+});
+
+test("parcours client: dashboard, nutrition, recettes, programme, messages et securite coach", async ({ page }) => {
+  await login(page, clientEmail);
+  await expect(page).toHaveURL(/\/client/);
+  await expect(page.getByRole("heading", { name: /Bonjour/ })).toBeVisible();
+  await expect(page.getByText("Action prioritaire")).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Corner Cuisine" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Programme" })).toBeVisible();
+
+  await page.goto("/coach");
+  await expect(page).toHaveURL(/\/client/);
+  await logout(page);
+});
+
+for (const width of [320, 375, 390, 430, 768, 1024, 1440]) {
+  test(`responsive sans scroll horizontal a ${width}px`, async ({ page }) => {
+    await page.setViewportSize({ width, height: 900 });
+    await login(page, coachEmail);
+    await expectNoHorizontalScroll(page);
+    await logout(page);
+
+    await page.setViewportSize({ width, height: 900 });
+    await login(page, clientEmail);
+    await expectNoHorizontalScroll(page);
+    await logout(page);
+  });
+}
+
+function readLocalEnv(key: string) {
+  const envPath = path.join(process.cwd(), ".env.local");
+  const content = readFileSync(envPath, "utf8");
+  const line = content.split("\n").find((item) => item.startsWith(`${key}=`));
+  return line?.slice(key.length + 1).trim();
+}

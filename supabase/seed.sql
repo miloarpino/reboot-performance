@@ -1,0 +1,3 @@
+-- Demo identities are created by scripts/seed-supabase.mjs through Supabase Auth Admin.
+-- This file intentionally stays lightweight because auth.users cannot be seeded
+-- safely with plain SQL in hosted Supabase.
