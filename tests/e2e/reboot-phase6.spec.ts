@@ -44,7 +44,13 @@ test("mauvaise connexion, connexion coach, navigation coach et deconnexion", asy
   await expect(page.getByRole("navigation")).toContainText("Agent IA");
   await expect(page.getByRole("navigation")).toContainText("Contenus");
   await expect(page.getByRole("navigation")).toContainText("Notifications");
-  await expect(page.getByRole("heading", { name: "Fiche client" })).toBeVisible();
+  await page.getByRole("button", { name: "Clair" }).click();
+  await expect(page.locator("html")).toHaveAttribute("data-theme", "light");
+  await page.getByRole("button", { name: "Sombre" }).click();
+  await expect(page.locator("html")).toHaveAttribute("data-theme", "dark");
+  await page.getByRole("button", { name: "Systeme" }).click();
+  await page.getByRole("button", { name: "Clients", exact: true }).click();
+  await expect(page.getByRole("heading", { name: "Clients", level: 1 })).toBeVisible();
   await logout(page);
 });
 
@@ -52,25 +58,31 @@ test("parcours coach: bilan, nutrition, seance, IA et contenu restent fonctionne
   await login(page, coachEmail);
   await expect(page).toHaveURL(/\/coach/);
 
+  await page.getByRole("button", { name: "Clients", exact: true }).click();
+  await page.getByRole("button", { name: "Bilan" }).click();
   await page.getByLabel("Objectif", { exact: true }).fill("Phase 6 E2E - objectif controle");
   await page.getByRole("button", { name: "Enregistrer le bilan" }).click();
   await expect(page.getByLabel("Objectif", { exact: true })).toHaveValue("Phase 6 E2E - objectif controle");
 
+  await page.getByRole("button", { name: "Nutrition" }).click();
   await page.getByLabel("Calories").fill("1990");
   await page.getByRole("button", { name: "Modifier la nutrition" }).click();
   await expect(page.getByLabel("Calories")).toHaveValue("1990");
 
+  await page.getByRole("button", { name: "Entrainement" }).click();
   const title = `Seance E2E ${Date.now()}`;
-  const workoutSection = page.locator("section").filter({ has: page.getByRole("heading", { name: "Seances", exact: true }) }).last();
+  const workoutSection = page.locator("section").filter({ has: page.getByRole("button", { name: "Attribuer la seance" }) }).last();
   await workoutSection.getByLabel("Titre").fill(title);
   await workoutSection.getByLabel("Date").fill(new Date().toISOString().slice(0, 10));
   await workoutSection.getByRole("button", { name: "Attribuer la seance" }).click();
   await expect(page.getByText(title)).toBeVisible();
 
+  await page.getByRole("button", { name: "Agent IA", exact: true }).click();
   await page.getByRole("button", { name: "Analyser ce client" }).click();
   await expect(page.getByText(/adherence|attention prioritaire|suivi stable/i).first()).toBeVisible();
 
-  const contentSection = page.locator("section").filter({ has: page.getByRole("heading", { name: "Contenus", exact: true }) }).last();
+  await page.getByRole("button", { name: "Contenus", exact: true }).click();
+  const contentSection = page.locator("section").filter({ has: page.getByRole("heading", { name: "Nouveau contenu", exact: true }) }).last();
   await contentSection.getByLabel("Titre").fill(`Contenu E2E ${Date.now()}`);
   await contentSection.getByLabel("Contenu").fill("Message de test E2E visible uniquement selon ciblage.");
   await contentSection.getByRole("button", { name: "Enregistrer brouillon" }).click();
@@ -82,10 +94,12 @@ test("parcours coach: bilan, nutrition, seance, IA et contenu restent fonctionne
 test("parcours client: dashboard, nutrition, recettes, programme, messages et securite coach", async ({ page }) => {
   await login(page, clientEmail);
   await expect(page).toHaveURL(/\/client/);
-  await expect(page.getByRole("heading", { name: /Bonjour/ })).toBeVisible();
-  await expect(page.getByText("Action prioritaire")).toBeVisible();
-  await expect(page.getByRole("heading", { name: "Corner Cuisine" })).toBeVisible();
-  await expect(page.getByRole("heading", { name: "Programme" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Aujourd'hui" })).toBeVisible();
+  await expect(page.getByText(/Realiser|Choisir|Lire/)).toBeVisible();
+  await page.getByRole("button", { name: "Corner Cuisine" }).click();
+  await expect(page.getByRole("heading", { name: "Corner Cuisine", level: 1 })).toBeVisible();
+  await page.getByRole("button", { name: "Programme", exact: true }).click();
+  await expect(page.getByRole("heading", { name: "Programme", level: 1 })).toBeVisible();
 
   await page.goto("/coach");
   await expect(page).toHaveURL(/\/client/);
