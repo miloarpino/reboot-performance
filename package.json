@@ -10,6 +10,8 @@
     "test:e2e": "playwright test",
     "security:audit": "node scripts/secret-audit.mjs",
     "supabase:seed": "node scripts/seed-supabase.mjs",
+    "supabase:seed-demo": "node scripts/seed-demo-supabase.mjs",
+    "supabase:demo-smoke": "node scripts/supabase-demo-smoke-test.mjs",
     "supabase:smoke": "node scripts/supabase-smoke-test.mjs",
     "supabase:phase4": "node scripts/supabase-phase4-test.mjs",
     "supabase:phase5": "node scripts/supabase-phase5-test.mjs"
