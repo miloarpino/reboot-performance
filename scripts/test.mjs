@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
 import { initialState } from "../src/seed.mjs";
 import {
   analyzeClient,
@@ -182,5 +183,10 @@ assert.ok(state.auditLogs.length >= 8, "historique audit alimente");
 assert.ok(ACTION_NAMES.includes("open-create") && ACTION_NAMES.includes("approve-ai"), "actions UI principales declarees");
 assert.ok(ACTION_NAMES.includes("open-assessment-editor") && ACTION_NAMES.includes("complete-workout"), "actions Phase 2 declarees");
 assert.ok(ACTION_NAMES.includes("toggle-recipe-favorite") && ACTION_NAMES.includes("open-recipe-detail"), "actions Corner Cuisine declarees");
+
+const supabaseServerSource = readFileSync(new URL("../lib/supabase/server.ts", import.meta.url), "utf8");
+assert.ok(supabaseServerSource.includes("cookieStore.getAll()"), "Supabase SSR conserve cookieStore.getAll");
+assert.ok(supabaseServerSource.includes("Cookies can only be modified in a Server Action or Route Handler"), "Supabase SSR ignore uniquement l'erreur cookie Server Component");
+assert.ok(supabaseServerSource.includes("throw error;"), "Supabase SSR ne masque pas les autres erreurs cookie");
 
 console.log("Tests Phase 3 OK: audit local, Corner Cuisine personnalise, profils perte/masse/maintien, allergies, recherche, favoris et detail.");
