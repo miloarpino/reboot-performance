@@ -129,6 +129,7 @@ test("PWA et detection douce de nouvelle version", async ({ page }) => {
 test("perte puis retour reseau affiche l'etat temps reel", async ({ page }) => {
   await login(page, clientEmail);
   await expect(page).toHaveURL(/\/client/);
+  await expect(page.getByText(/Connexion temps reel|Synchronise/)).toBeVisible();
   await page.evaluate(() => window.dispatchEvent(new Event("offline")));
   await expect(page.getByText("Hors ligne")).toBeVisible();
   await page.evaluate(() => window.dispatchEvent(new Event("online")));
