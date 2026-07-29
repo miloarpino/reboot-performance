@@ -189,4 +189,33 @@ assert.ok(supabaseServerSource.includes("cookieStore.getAll()"), "Supabase SSR c
 assert.ok(supabaseServerSource.includes("Cookies can only be modified in a Server Action or Route Handler"), "Supabase SSR ignore uniquement l'erreur cookie Server Component");
 assert.ok(supabaseServerSource.includes("throw error;"), "Supabase SSR ne masque pas les autres erreurs cookie");
 
+const serverActionsSource = readFileSync(new URL("../app/actions.ts", import.meta.url), "utf8");
+for (const actionName of ["updateAssessmentAction", "assignWorkoutAction", "updateNutritionAction", "createAiRecommendationAction"]) {
+  const actionBlock = serverActionsSource.slice(
+    serverActionsSource.indexOf(`export async function ${actionName}`),
+    serverActionsSource.indexOf("export async function", serverActionsSource.indexOf(`export async function ${actionName}`) + 1)
+  );
+  assert.ok(actionBlock.includes("await requireCoachClient"), `${actionName} verifie le rattachement coach-client avant mutation`);
+}
+assert.ok(serverActionsSource.includes("reboot_session_v1"), "le feedback de seance utilise une structure versionnee");
+assert.ok(serverActionsSource.includes("weekly_private_journals"), "le journal prive hebdo est enregistre dans weekly_private_journals");
+assert.ok(!serverActionsSource.includes("private_journal:"), "weekly_checkins ne doit plus recevoir private_journal");
+assert.ok(serverActionsSource.includes("${clientId}/${checkinId}/"), "les photos hebdo utilisent le chemin client_id/checkin_id/fichier");
+assert.ok(serverActionsSource.includes("weekly_private_journal.visibility_updated"), "le consentement de partage du journal est modifiable sans modifier le bilan");
+
+const appSource = readFileSync(new URL("../app/supabase-app.tsx", import.meta.url), "utf8");
+const themeBlock = appSource.slice(appSource.indexOf("function ThemeSwitcher()"), appSource.indexOf("function LiveUpdateBridge"));
+assert.ok(!themeBlock.includes("<strong>"), "le bouton theme ne rend pas de libelle Clair/Sombre visible");
+assert.ok(appSource.includes("workoutCompletedSetKeys"), "l'interface lit les series terminees depuis le feedback versionne");
+assert.ok(appSource.includes("Partager cette note privée avec mon coach"), "le bilan client expose le consentement de partage du journal privé");
+assert.ok(appSource.includes("weeklyCheckinStatusLabel"), "les statuts de bilan hebdo sont traduits sans exposer les valeurs techniques");
+
+const dataSource = readFileSync(new URL("../lib/supabase/data.ts", import.meta.url), "utf8");
+assert.ok(dataSource.includes("weekly_private_journals"), "les lectures Supabase recuperent les journaux prives separes");
+assert.ok(dataSource.includes("createSignedUrl"), "les photos de bilan sont lues via URL signee");
+
+const phase8Source = readFileSync(new URL("../scripts/supabase-phase8-client-tracking-test.mjs", import.meta.url), "utf8");
+assert.ok(phase8Source.includes("ALLOW_REMOTE_RLS_TESTS"), "le test Phase 8 refuse les mutations distantes sans autorisation explicite");
+assert.ok(phase8Source.includes("finally"), "le test Phase 8 garantit un nettoyage meme en cas d'echec");
+
 console.log("Tests Phase 3 OK: audit local, Corner Cuisine personnalise, profils perte/masse/maintien, allergies, recherche, favoris et detail.");

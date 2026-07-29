@@ -51,7 +51,7 @@ export async function POST(request: Request) {
 
   const parsed = requestSchema.safeParse(JSON.parse(rawBody || "{}"));
   if (!parsed.success) {
-    return NextResponse.json({ error: "Payload invalide." }, { status: 400 });
+    return NextResponse.json({ error: "Demande invalide." }, { status: 400 });
   }
 
   const recentUsage = await supabase
@@ -164,7 +164,7 @@ function buildDemoAiResponse({ client, assessment, nutrition, workouts }: any) {
   const fat = Math.round(weight * 0.8);
 
   return {
-    summary: `${client.first_name}: analyse ${aiMode() === "demo" ? "demo" : "api"} structuree depuis Supabase.`,
+    summary: `${client.first_name} : analyse structurée du bilan, de la nutrition et des dernières séances.`,
     priority,
     signals: [assessment.formula, hasPain ? "douleur" : "pas_de_douleur_majeure", missed ? "seances_manquees" : "suivi_actif"],
     recommendations: [
@@ -181,7 +181,7 @@ function buildDemoAiResponse({ client, assessment, nutrition, workouts }: any) {
           fat,
           water_liters: Number((weight * 0.035).toFixed(1))
         },
-        justification: "Mode demonstration IA: calcul deterministe base sur bilan, formule et poids.",
+        justification: "Proposition calculée à partir du bilan, de l'objectif actuel et du poids renseigné.",
         expected_benefit: "Obtenir une cible nutrition coherente avec l'objectif actuel.",
         risks: hasPain ? ["Surveiller fatigue et douleurs"] : [],
         requires_client_visibility: true
