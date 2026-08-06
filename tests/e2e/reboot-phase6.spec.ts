@@ -3,10 +3,30 @@ import { mkdirSync, readFileSync } from "node:fs";
 import path from "node:path";
 
 const password = process.env.SEED_PASSWORD || readLocalEnv("SEED_PASSWORD");
-const coachEmail = "coach.milo@reboot.test";
+const coachEmail = process.env.COACH_E2E_EMAIL || "milo.reboot.performance@gmail.com";
 const clientEmail = "cliente.perte@reboot.test";
 const allowRemoteMutations = process.env.ALLOW_REMOTE_E2E_MUTATIONS === "true";
 const screenshotDirectory = "/private/tmp/reboot-interface-mix";
+
+test("récupération de mot de passe : parcours public et liens invalides", async ({ page }) => {
+  await page.goto("/login");
+  await expect(page.getByRole("link", { name: "Mot de passe oublié ?" })).toHaveAttribute("href", "/forgot-password");
+
+  await page.getByRole("link", { name: "Mot de passe oublié ?" }).click();
+  await expect(page.getByRole("heading", { name: "Mot de passe oublié" })).toBeVisible();
+  await expect(page.getByLabel("Adresse e-mail")).toHaveAttribute("autocomplete", "email");
+  await page.getByLabel("Adresse e-mail").fill("adresse-invalide");
+  await page.getByRole("button", { name: "Recevoir un lien sécurisé" }).click();
+  expect(await page.getByLabel("Adresse e-mail").evaluate((input: HTMLInputElement) => input.validity.valid)).toBe(false);
+
+  await page.goto("/reset-password");
+  await expect(page.getByText("Ce lien de récupération est invalide ou a expiré.")).toBeVisible();
+  await expect(page.getByRole("link", { name: "Demander un nouveau lien" })).toHaveAttribute("href", "/forgot-password");
+
+  await page.goto("/auth/callback");
+  await expect(page).toHaveURL(/\/login\?error=recovery_link_invalid/);
+  await expect(page.getByText("Ce lien de récupération est invalide ou a expiré. Demandez un nouveau lien.")).toBeVisible();
+});
 
 test.skip(!password, "SEED_PASSWORD is required for E2E tests.");
 

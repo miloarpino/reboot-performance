@@ -3,6 +3,7 @@
 import { useActionState, useEffect, useMemo, useRef, useState } from "react";
 import type { CSSProperties } from "react";
 import Image from "next/image";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { createSupabaseBrowserClient } from "../lib/supabase/client";
 import {
@@ -119,7 +120,7 @@ const clientTabs: Array<{ id: ClientTab; label: string }> = [
   { id: "history", label: "Historique" }
 ];
 
-export function LoginScreen({ error }: { error?: string }) {
+export function LoginScreen({ error, passwordUpdated = false }: { error?: string; passwordUpdated?: boolean }) {
   return (
     <main className="auth-shell">
       <section className="panel auth-panel stack">
@@ -128,14 +129,14 @@ export function LoginScreen({ error }: { error?: string }) {
           <h1>Connexion</h1>
           <p className="muted">Connectez-vous avec votre compte coach ou client.</p>
         </div>
-        {error ? (
-          <p className="notice danger-notice" role="alert">Email ou mot de passe incorrect. Vérifiez vos identifiants puis réessayez.</p>
-        ) : null}
+        {passwordUpdated ? <p className="notice" role="status">Mot de passe modifié. Vous pouvez vous connecter.</p> : null}
+        {error ? <p className="notice danger-notice" role="alert">{error === "recovery_link_invalid" ? "Ce lien de récupération est invalide ou a expiré. Demandez un nouveau lien." : "Email ou mot de passe incorrect. Vérifiez vos identifiants puis réessayez."}</p> : null}
         <form className="stack" action={signInAction}>
           <label>Email <input name="email" type="email" required placeholder="coach@milo.reboot" /></label>
           <label>Mot de passe <input name="password" type="password" required placeholder="••••••••" /></label>
           <button className="primary">Se connecter</button>
         </form>
+        <p className="muted small"><Link href="/forgot-password">Mot de passe oublié ?</Link></p>
         <p className="muted small"><a href="/demo">Découvrir l'espace de démonstration</a></p>
       </section>
     </main>

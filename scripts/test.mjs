@@ -218,4 +218,25 @@ const phase8Source = readFileSync(new URL("../scripts/supabase-phase8-client-tra
 assert.ok(phase8Source.includes("ALLOW_REMOTE_RLS_TESTS"), "le test Phase 8 refuse les mutations distantes sans autorisation explicite");
 assert.ok(phase8Source.includes("finally"), "le test Phase 8 garantit un nettoyage meme en cas d'echec");
 
+const loginSource = readFileSync(new URL("../app/supabase-app.tsx", import.meta.url), "utf8");
+assert.ok(loginSource.includes("Mot de passe oublié ?"), "la connexion expose un lien de récupération visible");
+assert.ok(loginSource.includes("Mot de passe modifié. Vous pouvez vous connecter."), "la connexion confirme une modification réussie");
+
+const forgotPasswordActionSource = readFileSync(new URL("../app/forgot-password/actions.ts", import.meta.url), "utf8");
+assert.ok(forgotPasswordActionSource.includes("resetPasswordForEmail"), "la demande de récupération utilise Supabase Auth");
+assert.ok(forgotPasswordActionSource.includes("Si cette adresse est associée à un compte"), "la demande de récupération garde une réponse générique");
+assert.ok(!forgotPasswordActionSource.includes("SUPABASE_SERVICE_ROLE_KEY"), "la demande publique ne charge aucune clé de service");
+
+const recoveryCallbackSource = readFileSync(new URL("../app/auth/callback/route.ts", import.meta.url), "utf8");
+assert.ok(recoveryCallbackSource.includes("exchangeCodeForSession"), "le callback échange le code PKCE contre une session");
+assert.ok(recoveryCallbackSource.includes('flow !== "recovery"'), "le callback refuse les flux non-récupération");
+assert.ok(recoveryCallbackSource.includes('Cache-Control", "private, no-store'), "le callback interdit la mise en cache des cookies Auth");
+assert.ok(!recoveryCallbackSource.includes("SUPABASE_SERVICE_ROLE_KEY"), "le callback PKCE n'expose pas de clé de service");
+
+const resetPasswordActionSource = readFileSync(new URL("../app/reset-password/actions.ts", import.meta.url), "utf8");
+assert.ok(resetPasswordActionSource.includes("isValidPasswordRecoveryCookie"), "la modification exige une session de récupération valide");
+assert.ok(resetPasswordActionSource.includes('updateUser({ password })'), "la modification utilise uniquement la session de récupération");
+assert.ok(resetPasswordActionSource.includes('signOut({ scope: "global" })'), "la modification révoque les sessions actives");
+assert.ok(!resetPasswordActionSource.includes("SUPABASE_SERVICE_ROLE_KEY"), "la modification de mot de passe n'utilise pas de clé de service");
+
 console.log("Tests Phase 3 OK: audit local, Corner Cuisine personnalise, profils perte/masse/maintien, allergies, recherche, favoris et detail.");
