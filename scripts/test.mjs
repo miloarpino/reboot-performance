@@ -239,4 +239,19 @@ assert.ok(resetPasswordActionSource.includes('updateUser({ password })'), "la mo
 assert.ok(resetPasswordActionSource.includes('signOut({ scope: "global" })'), "la modification révoque les sessions actives");
 assert.ok(!resetPasswordActionSource.includes("SUPABASE_SERVICE_ROLE_KEY"), "la modification de mot de passe n'utilise pas de clé de service");
 
+const responsiveCssSource = readFileSync(new URL("../app/globals.css", import.meta.url), "utf8");
+const responsiveAuditCss = responsiveCssSource.slice(responsiveCssSource.indexOf("/* Responsive audit:"));
+assert.ok(responsiveCssSource.includes(".span-7 { grid-column: span 7; }"), "les panneaux sur sept colonnes occupent réellement leur largeur");
+assert.ok(responsiveAuditCss.includes("max-width: none"), "le contenu utilise toute la largeur disponible sur grand écran");
+assert.ok(responsiveAuditCss.includes(".coach-content-hub > .grid"), "les panneaux éditoriaux ont une grille responsive dédiée");
+assert.ok(responsiveAuditCss.includes("grid-template-columns: repeat(3, minmax(0, 1fr))"), "les onglets Contenu passent en grille sans rail horizontal");
+assert.ok(responsiveAuditCss.includes(".client-dossier > .tabs"), "les onglets de dossier coach restent sans débordement sur mobile");
+assert.ok(responsiveAuditCss.includes(".week-calendar"), "le calendrier client abandonne le rail horizontal sur petits écrans");
+
+const responsiveE2eSource = readFileSync(new URL("../tests/e2e/reboot-phase6.spec.ts", import.meta.url), "utf8");
+assert.ok(responsiveE2eSource.includes("[320, 390, 700, 1024, 1280, 1440, 1920]"), "les sept largeurs de référence sont couvertes");
+assert.ok(responsiveE2eSource.includes("audit responsive complet Coach et Client"), "les espaces Coach et Client sont audités en une session par rôle");
+assert.ok(responsiveE2eSource.includes("E2E_AUTH_PASSWORD"), "les E2E authentifiés exigent un secret injecté explicitement");
+assert.ok(!responsiveE2eSource.includes("readLocalEnv"), "les E2E n'extraient aucun mot de passe depuis un fichier local");
+
 console.log("Tests Phase 3 OK: audit local, Corner Cuisine personnalise, profils perte/masse/maintien, allergies, recherche, favoris et detail.");

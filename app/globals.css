@@ -676,6 +676,7 @@ textarea:focus-visible {
 .span-4 { grid-column: span 4; }
 .span-5 { grid-column: span 5; }
 .span-6 { grid-column: span 6; }
+.span-7 { grid-column: span 7; }
 .span-8 { grid-column: span 8; }
 .span-9 { grid-column: span 9; }
 .span-12 { grid-column: span 12; }
@@ -1658,6 +1659,7 @@ h3 {
   .span-4,
   .span-5,
   .span-6,
+  .span-7,
   .span-8,
   .span-9 {
     grid-column: span 6;
@@ -1792,6 +1794,7 @@ h3 {
   .span-4,
   .span-5,
   .span-6,
+  .span-7,
   .span-8,
   .span-9,
   .span-12 {
@@ -3646,6 +3649,99 @@ textarea {
   }
 
   .empty-state {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+/* Responsive audit: keep every workspace readable without horizontal rails. */
+.content {
+  max-width: none;
+  margin-inline: 0;
+}
+
+.coach-content-hub {
+  min-width: 0;
+}
+
+.coach-content-hub > .grid {
+  width: 100%;
+}
+
+.coach-content-tabs {
+  position: static;
+  top: auto;
+}
+
+@media (max-width: 900px) {
+  .coach-content-hub > .grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .coach-content-hub > .grid > .span-3,
+  .coach-content-hub > .grid > .span-4,
+  .coach-content-hub > .grid > .span-5,
+  .coach-content-hub > .grid > .span-6,
+  .coach-content-hub > .grid > .span-7,
+  .coach-content-hub > .grid > .span-8,
+  .coach-content-hub > .grid > .span-9,
+  .coach-content-hub > .grid > .span-12 {
+    grid-column: 1 / -1;
+  }
+
+  .coach-content-tabs {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    overflow: visible;
+    scroll-snap-type: none;
+  }
+
+  .coach-content-hub > .tabs button,
+  .coach-content-tabs button {
+    width: 100%;
+    min-width: 0;
+    flex: none;
+  }
+}
+
+@media (max-width: 760px) {
+  .client-signal-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .week-calendar {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    overflow: visible;
+    overscroll-behavior-inline: auto;
+    scroll-snap-type: none;
+    padding-bottom: 0;
+  }
+
+  .client-dossier > .tabs {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    overflow: visible;
+    overscroll-behavior-inline: auto;
+    scroll-snap-type: none;
+  }
+
+  .client-dossier > .tabs button {
+    width: 100%;
+    min-width: 0;
+    flex: none;
+  }
+}
+
+@media (max-width: 560px) {
+  .coach-content-tabs {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 380px) {
+  .coach-content-tabs,
+  .client-dossier > .tabs,
+  .client-signal-grid,
+  .week-calendar {
     grid-template-columns: minmax(0, 1fr);
   }
 }

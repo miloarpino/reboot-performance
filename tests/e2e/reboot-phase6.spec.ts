@@ -1,18 +1,28 @@
 import { expect, test, type Page } from "@playwright/test";
-import { mkdirSync, readFileSync } from "node:fs";
-import path from "node:path";
+import { mkdirSync } from "node:fs";
 
-const password = process.env.SEED_PASSWORD || readLocalEnv("SEED_PASSWORD");
+const password = process.env.E2E_AUTH_PASSWORD;
 const coachEmail = process.env.COACH_E2E_EMAIL || "milo.reboot.performance@gmail.com";
 const clientEmail = "cliente.perte@reboot.test";
 const allowRemoteMutations = process.env.ALLOW_REMOTE_E2E_MUTATIONS === "true";
 const screenshotDirectory = "/private/tmp/reboot-interface-mix";
+const responsiveWidths = [320, 390, 700, 1024, 1280, 1440, 1920];
+const coachContentTabs = ["Vue d'ensemble", "Programmes", "Nutrition et recettes", "Bibliothèque", "Tribu", "Badges", "Jeux et quiz"];
+const coachDossierTabs = ["Vue d'ensemble", "Bilan", "Entraînement", "Nutrition", "Progrès", "Messages", "Médias", "Historique"];
+const clientNavigationItems = ["Accueil", "Séance active", "Coin diététique", "Bilan hebdo", "Mes progrès", "Tribu & Badges", "Jeux & Quiz", "Bibliothèque"];
+const publicRecoveryTestTitle = "récupération de mot de passe : parcours public et liens invalides";
+
+test.beforeEach(({}, testInfo) => {
+  if (!password && testInfo.title !== publicRecoveryTestTitle) {
+    test.skip(true, "E2E_AUTH_PASSWORD doit être injecté de manière sécurisée pour les parcours authentifiés.");
+  }
+});
 
 test("récupération de mot de passe : parcours public et liens invalides", async ({ page }) => {
   await page.goto("/login");
   await expect(page.getByRole("link", { name: "Mot de passe oublié ?" })).toHaveAttribute("href", "/forgot-password");
 
-  await page.getByRole("link", { name: "Mot de passe oublié ?" }).click();
+  await page.goto("/forgot-password");
   await expect(page.getByRole("heading", { name: "Mot de passe oublié" })).toBeVisible();
   await expect(page.getByLabel("Adresse e-mail")).toHaveAttribute("autocomplete", "email");
   await page.getByLabel("Adresse e-mail").fill("adresse-invalide");
@@ -27,8 +37,6 @@ test("récupération de mot de passe : parcours public et liens invalides", asyn
   await expect(page).toHaveURL(/\/login\?error=recovery_link_invalid/);
   await expect(page.getByText("Ce lien de récupération est invalide ou a expiré. Demandez un nouveau lien.")).toBeVisible();
 });
-
-test.skip(!password, "SEED_PASSWORD is required for E2E tests.");
 
 async function login(page: Page, email: string) {
   await page.goto("/login");
@@ -57,6 +65,81 @@ async function expectNoHorizontalScroll(page: Page) {
     return root ? root.scrollWidth - window.innerWidth : 0;
   });
   expect(overflow).toBeLessThanOrEqual(1);
+}
+
+async function expectResponsiveLayout(page: Page, context: string) {
+  await page.waitForTimeout(100);
+  await expectNoHorizontalScroll(page);
+
+  const issues = await page.evaluate(() => {
+    const visible = (element: Element) => {
+      const style = window.getComputedStyle(element);
+      const rect = element.getBoundingClientRect();
+      return style.display !== "none" && style.visibility !== "hidden" && rect.width > 1 && rect.height > 1;
+    };
+    const outsideViewport = Array.from(document.querySelectorAll(
+      ".content .panel, .content .kpi, .content .list-item, .content .recipe-card, .content .game-menu-card, .content .dashboard-metric, .content .daily-ring-card"
+    ))
+      .filter(visible)
+      .map((element) => ({ element, rect: element.getBoundingClientRect() }))
+      .filter(({ rect }) => rect.left < -1 || rect.right > window.innerWidth + 1)
+      .map(({ element }) => element.className || element.tagName);
+
+    const internalRails = [
+      ".coach-content-tabs",
+      ".client-dossier > .tabs",
+      ".week-calendar"
+    ]
+      .flatMap((selector) => Array.from(document.querySelectorAll<HTMLElement>(selector)))
+      .filter(visible)
+      .filter((element) => element.scrollWidth - element.clientWidth > 1)
+      .map((element) => element.className);
+
+    const groups = [
+      ".coach-content-hub > .grid",
+      ".coach-content-hub .list",
+      ".client-home",
+      ".client-dossier",
+      ".client-signal-grid",
+      ".daily-ring-grid",
+      ".week-calendar",
+      ".games-menu-grid",
+      ".recipe-grid"
+    ];
+    const overlaps: string[] = [];
+    groups.forEach((selector) => {
+      document.querySelectorAll(selector).forEach((group) => {
+        const cards = Array.from(group.children).filter(visible).map((element) => ({ element, rect: element.getBoundingClientRect() }));
+        for (let index = 0; index < cards.length; index += 1) {
+          for (let next = index + 1; next < cards.length; next += 1) {
+            const a = cards[index].rect;
+            const b = cards[next].rect;
+            if (Math.min(a.right, b.right) - Math.max(a.left, b.left) > 8 && Math.min(a.bottom, b.bottom) - Math.max(a.top, b.top) > 8) {
+              overlaps.push(selector);
+            }
+          }
+        }
+      });
+    });
+
+    const clippedText = Array.from(document.querySelectorAll<HTMLElement>(
+      ".content h1, .content h2, .content h3, .content p, .content strong, .content small, .content button, .content label"
+    ))
+      .filter(visible)
+      .filter((element) => {
+        const style = window.getComputedStyle(element);
+        return (element.scrollWidth - element.clientWidth > 1 || element.scrollHeight - element.clientHeight > 1)
+          && (style.overflowX !== "visible" || style.overflowY !== "visible" || style.textOverflow === "ellipsis");
+      })
+      .map((element) => element.textContent?.trim().slice(0, 80) || element.tagName);
+
+    return { outsideViewport, internalRails, overlaps: [...new Set(overlaps)], clippedText };
+  });
+
+  expect(issues.outsideViewport, `${context}: élément hors viewport`).toEqual([]);
+  expect(issues.internalRails, `${context}: défilement horizontal interne`).toEqual([]);
+  expect(issues.overlaps, `${context}: cartes superposées`).toEqual([]);
+  expect(issues.clippedText, `${context}: texte coupé`).toEqual([]);
 }
 
 test("mauvaise connexion, connexion coach, navigation coach et deconnexion", async ({ page }) => {
@@ -376,19 +459,43 @@ test("perte puis retour reseau affiche l'etat temps reel", async ({ page }) => {
   await logout(page);
 });
 
-for (const width of [320, 375, 390, 430, 700, 768, 900, 1024, 1280, 1440, 1920]) {
-  test(`responsive sans scroll horizontal a ${width}px`, async ({ page }) => {
-    await page.setViewportSize({ width, height: 900 });
-    await login(page, coachEmail);
-    await expectNoHorizontalScroll(page);
-    await resetLocalSession(page);
+test("audit responsive complet Coach et Client aux largeurs de référence", async ({ page }) => {
+  test.setTimeout(300_000);
 
+  await login(page, coachEmail);
+  for (const width of responsiveWidths) {
     await page.setViewportSize({ width, height: 900 });
-    await login(page, clientEmail);
-    await expectNoHorizontalScroll(page);
-    await resetLocalSession(page);
-  });
-}
+    await openNavigationItem(page, "Tableau de bord", width);
+    await expectResponsiveLayout(page, `Coach · tableau de bord · ${width}px`);
+
+    await openNavigationItem(page, "Contenu", width);
+    for (const tab of coachContentTabs) {
+      await page.getByRole("tab", { name: tab, exact: true }).click();
+      await expectResponsiveLayout(page, `Coach · contenu ${tab} · ${width}px`);
+    }
+
+    await openNavigationItem(page, "Clients", width);
+    await page.getByTestId("coach-client-row").first().click();
+    await expect(page.getByTestId("coach-client-dossier")).toBeVisible();
+    for (const tab of coachDossierTabs) {
+      await page.getByRole("tablist", { name: "Fiche client" }).getByRole("button", { name: tab, exact: true }).click();
+      await expectResponsiveLayout(page, `Coach · dossier ${tab} · ${width}px`);
+    }
+
+    await openNavigationItem(page, "Alertes", width);
+    await expectResponsiveLayout(page, `Coach · alertes · ${width}px`);
+  }
+
+  await resetLocalSession(page);
+  await login(page, clientEmail);
+  for (const width of responsiveWidths) {
+    await page.setViewportSize({ width, height: 900 });
+    for (const item of clientNavigationItems) {
+      await openNavigationItem(page, item, width);
+      await expectResponsiveLayout(page, `Client · ${item} · ${width}px`);
+    }
+  }
+});
 
 test("captures visuelles client et coach aux points de rupture demandes", async ({ page }) => {
   test.setTimeout(180_000);
@@ -474,11 +581,4 @@ async function openNavigationItem(page: Page, label: string, width: number) {
     window.scrollTo(0, 0);
   });
   await page.waitForTimeout(300);
-}
-
-function readLocalEnv(key: string) {
-  const envPath = path.join(process.cwd(), ".env.local");
-  const content = readFileSync(envPath, "utf8");
-  const line = content.split("\n").find((item) => item.startsWith(`${key}=`));
-  return line?.slice(key.length + 1).trim();
 }
