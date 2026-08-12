@@ -3,8 +3,9 @@
 import { useActionState, useEffect, useMemo, useRef, useState } from "react";
 import type { CSSProperties } from "react";
 import Image from "next/image";
+import type { Route } from "next";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { createSupabaseBrowserClient } from "../lib/supabase/client";
 import {
   archivePublicationAction,
@@ -1536,11 +1537,16 @@ function PublicationCreator({ clients }: { clients: any[] }) {
 }
 
 export function ClientSupabaseApp({ profile, data }: { profile: any; data: any }) {
-  const [active, setActive] = useState<ClientSection>("home");
+  const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
+  const requestedSection = searchParams.get("section");
+  const active = clientNav.some((item) => item.id === requestedSection) ? requestedSection as ClientSection : "home";
   const [menuOpen, setMenuOpen] = useState(false);
   const [query, setQuery] = useState("");
   const [recipeFilter, setRecipeFilter] = useState("all");
   const [favorites, setFavorites] = useState<string[]>([]);
+  const [selectedRecipe, setSelectedRecipe] = useState<{ recipe: any; index: number } | null>(null);
   useThemePersistence();
 
   useEffect(() => {
@@ -1575,7 +1581,7 @@ export function ClientSupabaseApp({ profile, data }: { profile: any; data: any }
   const completedThisWeek = data.workouts.filter((workout: any) => workout.status === "completed" && daysSince(workout.updated_at || workout.scheduled_for) <= 7).length;
   const plannedThisWeek = data.workouts.filter((workout: any) => daysSince(workout.scheduled_for) <= 7 && daysSince(workout.scheduled_for) >= 0).length;
   const weeklyProgress = progressPercent(completedThisWeek, Math.max(plannedThisWeek, 1));
-  const recommendation = displayContentTitle(data.contents[0]?.title || "Gardez le rythme cette semaine");
+  const recommendation = displayContentTitle(data.contents[0]?.title || "Gardez le rythme cette semaine").replace(/^Démonstration\s*·\s*/i, "");
   const priorityAction = nextWorkout ? "Réaliser la prochaine séance" : "Consulter le plan de la semaine";
   const activeMeta = clientNav.find((item) => item.id === active) || clientNav[0];
   const todayMeals = (data.mealEntries || []).filter((meal: any) => meal.meal_date === today);
@@ -1593,6 +1599,11 @@ export function ClientSupabaseApp({ profile, data }: { profile: any; data: any }
     const next = favorites.includes(recipeId) ? favorites.filter((id) => id !== recipeId) : [...favorites, recipeId];
     setFavorites(next);
     window.localStorage.setItem("reboot.recipe.favorites", JSON.stringify(next));
+  }
+
+  function navigateTo(section: ClientSection) {
+    const target = (section === "home" ? "/client" : `${pathname}?section=${section}`) as Route;
+    router.push(target, { scroll: false });
   }
 
   return (
@@ -1616,7 +1627,7 @@ export function ClientSupabaseApp({ profile, data }: { profile: any; data: any }
               type="button"
               title={item.label}
               aria-current={active === item.id ? "page" : undefined}
-              onClick={() => { setActive(item.id); setMenuOpen(false); }}
+              onClick={() => { navigateTo(item.id); setMenuOpen(false); }}
             >
               <span className="nav-icon" aria-hidden="true">{item.icon}</span>
               <span className="nav-label">{item.label}</span>
@@ -1641,8 +1652,8 @@ export function ClientSupabaseApp({ profile, data }: { profile: any; data: any }
                 <h2>{assessment?.goal || "Votre objectif se construit avec votre coach"}</h2>
                 <p className="muted">Une semaine structurée, des repères simples et un suivi adapté à votre rythme.</p>
                 <div className="quick-actions">
-                  <button className="primary" type="button" onClick={() => setActive(nextWorkout ? "active" : "weekly")}>{priorityAction}</button>
-                  <button className="ghost" type="button" onClick={() => setActive("progress")}>Voir mes progrès</button>
+                  <button className="primary" type="button" onClick={() => navigateTo(nextWorkout ? "active" : "weekly")}>{priorityAction}</button>
+                  <button className="ghost" type="button" onClick={() => navigateTo("progress")}>Voir mes progrès</button>
                 </div>
               </div>
               <div className="weekly-score" aria-label={`Progression hebdomadaire ${weeklyProgress}%`}>
@@ -1662,7 +1673,7 @@ export function ClientSupabaseApp({ profile, data }: { profile: any; data: any }
             <section className="panel week-overview stack" aria-label="Aperçu de la semaine">
               <div className="row between">
                 <div><span className="pill gold">Cette semaine</span><h2>Votre planning</h2></div>
-                <button className="ghost" type="button" onClick={() => setActive("active")}>Ouvrir la séance</button>
+                <button className="ghost" type="button" onClick={() => navigateTo("active")}>Ouvrir la séance</button>
               </div>
               <div className="week-calendar">
                 {weeklySchedule.map(({ day, date, workout, isToday }) => (
@@ -1680,7 +1691,7 @@ export function ClientSupabaseApp({ profile, data }: { profile: any; data: any }
                 <span className="pill gold">Prochaine étape</span>
                 <h2>{nextWorkout ? shortWorkoutTitle(nextWorkout.title) : "Votre coach prépare la suite"}</h2>
                 <p className="muted">{nextWorkout ? `${formatDayDate(nextWorkout.scheduled_for)} · ${nextWorkout.duration_minutes || 45} min` : "Aucune séance future n'est encore planifiée. Profitez de ce temps pour compléter votre bilan."}</p>
-                <button className="primary" type="button" onClick={() => setActive(nextWorkout ? "active" : "weekly")}>{nextWorkout ? "Commencer la séance" : "Compléter mon bilan"}</button>
+                <button className="primary" type="button" onClick={() => navigateTo(nextWorkout ? "active" : "weekly")}>{nextWorkout ? "Commencer la séance" : "Compléter mon bilan"}</button>
               </article>
               <article className="panel coach-note-card stack">
                 <span className="pill">Note du coach</span>
@@ -1692,7 +1703,7 @@ export function ClientSupabaseApp({ profile, data }: { profile: any; data: any }
         ) : null}
 
         {active === "active" ? (
-          <WorkoutSessionPanel workout={nextWorkout} onNavigate={setActive} />
+          <WorkoutSessionPanel workout={nextWorkout} onNavigate={navigateTo} />
         ) : null}
 
         {active === "nutrition" ? (
@@ -1769,35 +1780,20 @@ export function ClientSupabaseApp({ profile, data }: { profile: any; data: any }
                       <p>{recipe.coach_tip}</p>
                       <span className="pill gold">{assignments.has(recipe.id) ? "Envoyée par le coach" : "Adaptée à votre objectif"}</span>
                     </div>
-                    <details className="subtle-details recipe-instructions">
-                      <summary>Voir ingrédients et préparation</summary>
-                      <div className="grid">
-                        <div className="span-6">
-                          <h4>Ingrédients</h4>
-                          <ul>
-                            {(recipe.recipe_ingredients || []).sort(sortByPosition).map((ingredient: any, index: number) => (
-                              <li key={ingredient.id || index}>{[ingredient.quantity, ingredient.unit, ingredient.name || ingredient.ingredient].filter(Boolean).join(" ")}</li>
-                            ))}
-                          </ul>
-                          {!(recipe.recipe_ingredients || []).length ? <p className="muted small">Les ingrédients détaillés ne sont pas encore renseignés.</p> : null}
-                        </div>
-                        <div className="span-6">
-                          <h4>Préparation</h4>
-                          <ol>
-                            {(recipe.recipe_steps || []).sort(sortByPosition).map((step: any, index: number) => (
-                              <li key={step.id || index}>{step.instruction || step.body || step.description}</li>
-                            ))}
-                          </ol>
-                          {!(recipe.recipe_steps || []).length ? <p className="muted small">Les étapes détaillées ne sont pas encore renseignées.</p> : null}
-                        </div>
-                      </div>
-                    </details>
-                    <RecipeMealAdder recipe={recipe} />
+                    <button className="primary" type="button" onClick={() => setSelectedRecipe({ recipe, index: recipeIndex })}>Voir la recette</button>
                   </div>
                 </article>
               ))}
               {!filteredRecipes.length ? <EmptyState title="Aucune recette adaptée" text="Changez la recherche ou demandez une recette à Milo." /> : null}
             </div>
+            {selectedRecipe ? (
+              <RecipeDetailModal
+                recipe={selectedRecipe.recipe}
+                recipeIndex={selectedRecipe.index}
+                assigned={assignments.has(selectedRecipe.recipe.id)}
+                onClose={() => setSelectedRecipe(null)}
+              />
+            ) : null}
           </section>
         ) : null}
 
@@ -1815,7 +1811,7 @@ export function ClientSupabaseApp({ profile, data }: { profile: any; data: any }
             meals={data.mealEntries || []}
             hydration={data.hydrationEntries || []}
             nutrition={nutrition}
-            onNavigate={setActive}
+            onNavigate={navigateTo}
           />
         ) : null}
 
@@ -1915,6 +1911,10 @@ const badgeCatalog = [
   { code: "consistency", icon: "◆", name: "Régularité", category: "Régularité", description: "Maintenir une semaine complète de suivi.", target: 7 }
 ];
 
+function clientCommunityBody(body: unknown) {
+  return displayCommunityBody(typeof body === "string" ? body : undefined).replace(/^Démonstration\s*·\s*/i, "");
+}
+
 function TribePanel({
   posts,
   contents,
@@ -1957,6 +1957,12 @@ function TribePanel({
     community: Math.min(1, posts.length),
     consistency: Math.min(7, completedWorkouts + checkins.length + (hydrationTotal > 0 ? 1 : 0))
   };
+  const badgeStates = badgeCatalog.map((badge) => {
+    const unlocked = badges.some((item: any) => String(item.badge_code || item.badge_name || item.title || "").toLowerCase().includes(badge.code) || String(item.badge_name || item.title || "").toLowerCase() === badge.name.toLowerCase());
+    const current = badgeProgress[badge.code] || 0;
+    return { badge, unlocked, percent: unlocked ? 100 : progressPercent(current, badge.target) };
+  });
+  const nextBadge = badgeStates.filter((item) => !item.unlocked).sort((a, b) => b.percent - a.percent)[0];
   return (
     <section className="page-panel grid">
       <article className="panel span-8 stack">
@@ -1987,14 +1993,14 @@ function TribePanel({
                 <span className="muted small">{formatDate(post.created_at)}</span>
               </div>
               <span className="pill">{tribeKindLabel(post.kind)}</span>
-              <p>{displayCommunityBody(post.body)}</p>
+              <p>{clientCommunityBody(post.body)}</p>
               {post.media_url ? <a className="button-link ghost" href={post.media_url}>Voir le média</a> : null}
             </article>
           ))}
           {!feed.length ? <EmptyState title="Aucune publication réelle" text="Publiez le premier message de votre communauté." /> : null}
           <div className="demo-community-header">
-            <div><span className="pill gold">Démonstration</span><h3>Exemples de la communauté</h3></div>
-            <p className="muted small">Profils fictifs affichés uniquement pour présenter l'expérience. Ce ne sont pas de vrais clients.</p>
+            <div><span className="pill gold">Exemples Reboot</span><h3>Repères de la communauté</h3></div>
+            <p className="muted small">Ces publications sont des exemples Reboot et ne correspondent pas à de vrais clients.</p>
           </div>
           {demoTribePosts.map((post) => (
             <article className="list-item tribe-post demo-post" key={post.id}>
@@ -2013,10 +2019,8 @@ function TribePanel({
           <span className="pill gold">Badges</span>
           <h2>Votre catalogue</h2>
         </div>
-        {badgeCatalog.map((badge) => {
-          const unlocked = badges.some((item: any) => String(item.badge_code || item.badge_name || item.title || "").toLowerCase().includes(badge.code) || String(item.badge_name || item.title || "").toLowerCase() === badge.name.toLowerCase());
-          const current = badgeProgress[badge.code] || 0;
-          const percent = unlocked ? 100 : progressPercent(current, badge.target);
+        {nextBadge ? <article className="next-badge"><span className="muted small">Prochain badge</span><strong>{nextBadge.badge.name}</strong><div className="progress-track"><span style={{ width: `${nextBadge.percent}%` }} /></div><small>{nextBadge.percent}% atteint</small></article> : <p className="notice success-notice">Tous les badges disponibles sont débloqués.</p>}
+        {badgeStates.map(({ badge, unlocked, percent }) => {
           return (
             <article className={`badge-catalog-item ${unlocked ? "unlocked" : "locked"}`} key={badge.code}>
               <span className="badge-icon" aria-hidden="true">{badge.icon}</span>
@@ -2174,6 +2178,7 @@ function GamesPanel({ assessment, nutrition }: { assessment: any; nutrition: any
 function LibraryPanel({ contents, assessment }: { contents: any[]; assessment: any }) {
   const [search, setSearch] = useState("");
   const [category, setCategory] = useState("all");
+  const [librarySection, setLibrarySection] = useState<"express" | "deep">("express");
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const published = contents
     .filter((content: any) => ["revision_card", "deep_dive", "article", "guide"].includes(content.type))
@@ -2201,6 +2206,7 @@ function LibraryPanel({ contents, assessment }: { contents: any[]; assessment: a
     const compatible = !card.audience?.length || card.audience.some((tag: string) => normalized.includes(String(tag).toLowerCase())) || published.some((item) => item.id === card.id);
     return matchesSearch && matchesCategory && compatible;
   });
+  const sectionCards = filtered.filter((card) => librarySection === "express" ? card.type === "revision_card" : card.type !== "revision_card");
   const selected = cards.find((card) => card.id === selectedId);
 
   if (selected) {
@@ -2211,14 +2217,14 @@ function LibraryPanel({ contents, assessment }: { contents: any[]; assessment: a
         <button className="ghost library-back" type="button" onClick={() => setSelectedId(null)}>Retour à la bibliothèque</button>
         <article className="library-reader-hero">
           <Image src={libraryImage(selected, cards.indexOf(selected))} alt="" fill sizes="100vw" />
-          <div><span className="pill gold">{selected.demo ? "Démonstration" : selected.type === "deep_dive" ? "Dossier complet" : "Résumé rapide"}</span><h2>{selected.title}</h2><p>{selected.category} · {readingTime(selected.body)} min de lecture</p></div>
+          <div><span className="pill gold">{selected.demo ? "Exemple Reboot" : selected.type === "deep_dive" ? "Dossier approfondi" : "Fiche express"}</span><h2>{selected.title}</h2><p>{selected.category} · {readingTime(selected.body)} min de lecture</p></div>
         </article>
         <article className="panel library-article stack">
           <p className="library-introduction">{selected.summary}</p>
           {paragraphs.map((paragraph, index) => <section key={index}><h3>{index === 0 ? "À retenir" : `Repère ${index + 1}`}</h3><p>{paragraph}</p></section>)}
           {selected.keyPoints.length ? <section><h3>Points clés</h3><ul>{selected.keyPoints.map((point: string) => <li key={point}>{point}</li>)}</ul></section> : null}
           {selected.practicalTips.length ? <section><h3>Conseils pratiques</h3><ul>{selected.practicalTips.map((tip: string) => <li key={tip}>{tip}</li>)}</ul></section> : null}
-          <p className="muted small">Source : {selected.source || "Reboot Performance"} · {formatDate(selected.date)}</p>
+          <p className="muted small">Source : {selected.demo ? "Reboot Performance" : selected.source || "Reboot Performance"} · {formatDate(selected.date)}</p>
         </article>
         {related.length ? (
           <section className="stack"><h3>Contenus associés</h3><div className="library-related">{related.map((card) => <button className="library-related-card" type="button" key={card.id} onClick={() => setSelectedId(card.id)}><strong>{card.title}</strong><span>{readingTime(card.body)} min</span></button>)}</div></section>
@@ -2234,7 +2240,11 @@ function LibraryPanel({ contents, assessment }: { contents: any[]; assessment: a
           <h2>Bibliothèque scientifique</h2>
           <p className="muted">Fiches courtes et dossiers adaptés à votre profil.</p>
         </div>
-        <span className="pill gold">{filtered.length} contenu(s)</span>
+        <span className="pill gold">{sectionCards.length} contenu(s)</span>
+      </div>
+      <div className="library-section-tabs" role="tablist" aria-label="Format de contenu">
+        <button className={librarySection === "express" ? "active" : ""} type="button" role="tab" aria-selected={librarySection === "express"} onClick={() => setLibrarySection("express")}>Fiches express</button>
+        <button className={librarySection === "deep" ? "active" : ""} type="button" role="tab" aria-selected={librarySection === "deep"} onClick={() => setLibrarySection("deep")}>Dossiers approfondis</button>
       </div>
       <div className="library-tools">
         <input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Rechercher sommeil, protéines, récupération..." aria-label="Rechercher dans la bibliothèque" />
@@ -2243,10 +2253,10 @@ function LibraryPanel({ contents, assessment }: { contents: any[]; assessment: a
         </select>
       </div>
       <div className="library-grid">
-        {filtered.map((card, index) => (
+        {sectionCards.map((card, index) => (
           <article className="library-card" key={card.id}>
             <div className="library-card-media"><Image src={libraryImage(card, index)} alt="" fill sizes="(max-width: 700px) 100vw, 33vw" /></div>
-            <span className="pill">{card.demo ? "Démonstration" : card.type === "deep_dive" ? "Dossier complet" : "Fiche de révision"}</span>
+            <span className="pill">{card.demo ? "Exemple Reboot" : card.type === "revision_card" ? "Fiche express" : "Dossier approfondi"}</span>
             <h3>{card.title}</h3>
             <p className="muted">{truncateText(card.summary, 150)}</p>
             <div className="row between">
@@ -2257,11 +2267,11 @@ function LibraryPanel({ contents, assessment }: { contents: any[]; assessment: a
           </article>
         ))}
       </div>
-      {!filtered.length ? (
+      {!sectionCards.length ? (
         <div className="stack">
           <EmptyState
-            title="Aucun résultat"
-            text="Essayez une autre recherche ou une autre catégorie."
+            title={librarySection === "express" ? "Aucune fiche express" : "Aucun dossier approfondi"}
+            text="Essayez une autre recherche, une autre catégorie ou l’autre format de contenu."
           />
           {search || category !== "all" ? (
             <button className="ghost" type="button" onClick={() => { setSearch(""); setCategory("all"); }}>Réinitialiser les filtres</button>
@@ -2459,6 +2469,21 @@ function ProgressPanel({
     .filter((item: any) => item.status === "completed")
     .map((item: any) => ({ label: formatDayDate(item.scheduled_for), value: workoutVolume(item) }))
     .filter((item: any) => item.value > 0);
+  const hasAnyHistory = [
+    weightPoints,
+    waistPoints,
+    energyPoints,
+    stressPoints,
+    sleepPoints,
+    rpePoints,
+    nutritionAdherencePoints,
+    hydrationPoints,
+    caloriesPoints,
+    proteinPoints,
+    carbsPoints,
+    fatPoints,
+    workoutVolumePoints
+  ].some((points) => points.length > 0);
 
   return (
     <section className="page-panel stack progress-page">
@@ -2486,28 +2511,30 @@ function ProgressPanel({
           </div>
         </section>
       ) : null}
-      <section className="progress-grid">
-        <ChartCard title="Poids" unit="kg" points={weightPoints} />
-        <ChartCard title="Tour de taille" unit="cm" points={waistPoints} />
-        <ChartCard title="Énergie" unit="/10" points={energyPoints} />
-        <ChartCard title="Stress" unit="/10" points={stressPoints} />
-        <ChartCard title="Sommeil" unit="h" points={sleepPoints} />
-        <ChartCard title="RPE" unit="/10" points={rpePoints} />
-        <ChartCard title="Adhérence nutritionnelle" unit="/10" points={nutritionAdherencePoints} />
-        <BarChartCard title="Hydratation" unit="L" points={hydrationPoints} target={Number(nutrition?.water_liters || 0)} />
-        <BarChartCard title="Calories" unit="kcal" points={caloriesPoints} target={Number(nutrition?.calories || 0)} />
-        <ChartCard title="Protéines" unit="g" points={proteinPoints} />
-        <ChartCard title="Glucides" unit="g" points={carbsPoints} />
-        <ChartCard title="Lipides" unit="g" points={fatPoints} />
-        <BarChartCard title="Volume d'entraînement" unit="unités" points={workoutVolumePoints} />
-      </section>
+      {hasAnyHistory ? (
+        <section className="progress-grid">
+          <ChartCard title="Poids" unit="kg" points={weightPoints} />
+          <ChartCard title="Tour de taille" unit="cm" points={waistPoints} />
+          <ChartCard title="Énergie" unit="/10" points={energyPoints} />
+          <ChartCard title="Stress" unit="/10" points={stressPoints} />
+          <ChartCard title="Sommeil" unit="h" points={sleepPoints} />
+          <ChartCard title="RPE" unit="/10" points={rpePoints} />
+          <ChartCard title="Adhérence nutritionnelle" unit="/10" points={nutritionAdherencePoints} />
+          <BarChartCard title="Hydratation" unit="L" points={hydrationPoints} target={Number(nutrition?.water_liters || 0)} />
+          <BarChartCard title="Calories" unit="kcal" points={caloriesPoints} target={Number(nutrition?.calories || 0)} />
+          <ChartCard title="Protéines" unit="g" points={proteinPoints} />
+          <ChartCard title="Glucides" unit="g" points={carbsPoints} />
+          <ChartCard title="Lipides" unit="g" points={fatPoints} />
+          <BarChartCard title="Volume d'entraînement" unit="unités" points={workoutVolumePoints} />
+        </section>
+      ) : null}
       <section className="grid">
         {kpi("Adhérence", planned ? `${Math.round((completed / planned) * 100)}%` : "-", `${completed}/${planned} séance(s)`)}
         {kpi("Bilans", checkins.length, "envoyé(s)")}
         {kpi("Historique", auditLogs.length, "événement(s)")}
         {kpi("Objectif", assessment?.goal || "-", formulaLabel(assessment?.formula))}
       </section>
-      {!measurements.length && !checkins.length && !completed ? (
+      {!hasAnyHistory ? (
         <article className="panel row between progress-empty-action">
           <div><strong>Commencez votre historique</strong><p className="muted">Votre prochain bilan alimentera automatiquement ces graphiques.</p></div>
           <button className="primary" type="button" onClick={() => onNavigate("weekly")}>Remplir mon bilan</button>
@@ -2530,6 +2557,16 @@ function BarChartCard({
 }) {
   if (!points.length) return <article className="panel chart-card stack"><h3>{title}</h3><EmptyState title="Aucune donnée" text="Ce graphique apparaîtra après vos prochaines saisies." /></article>;
   const recent = points.slice(-12);
+  const current = recent[recent.length - 1];
+  if (recent.length === 1) {
+    return (
+      <article className="panel chart-card chart-single-value stack">
+        <div className="row between"><h3>{title}</h3><span className="pill">{unit}</span></div>
+        <strong>{current.value} {unit}</strong>
+        <p className="muted small">Une seule valeur est disponible pour le moment.{target ? ` Objectif : ${target} ${unit}.` : ""}</p>
+      </article>
+    );
+  }
   const max = Math.max(...recent.map((point) => point.value), Number(target || 0), 1);
   return (
     <article className="panel chart-card stack">
@@ -2542,7 +2579,7 @@ function BarChartCard({
           </span>
         ))}
       </div>
-      <p className="muted small">Dernière valeur : {recent[recent.length - 1].value} {unit}{target ? ` · objectif ${target} ${unit}` : ""}</p>
+      <p className="muted small">Dernière valeur : {current.value} {unit}{target ? ` · objectif ${target} ${unit}` : ""}</p>
     </article>
   );
 }
@@ -2550,6 +2587,16 @@ function BarChartCard({
 function ChartCard({ title, unit, points }: { title: string; unit: string; points: Array<{ label: string; value: number }> }) {
   if (!points.length) {
     return <article className="panel chart-card stack"><h3>{title}</h3><EmptyState title="Aucune donnée" text="Ce graphique apparaîtra après vos prochaines saisies." /></article>;
+  }
+  const current = points[points.length - 1];
+  if (points.length === 1) {
+    return (
+      <article className="panel chart-card chart-single-value stack">
+        <div className="row between"><h3>{title}</h3><span className="pill">{unit}</span></div>
+        <strong>{current.value} {unit}</strong>
+        <p className="muted small">Une seule mesure est disponible pour le moment.</p>
+      </article>
+    );
   }
   const max = Math.max(...points.map((point) => point.value), 1);
   const min = Math.min(...points.map((point) => point.value), 0);
@@ -2575,7 +2622,7 @@ function ChartCard({ title, unit, points }: { title: string; unit: string; point
           return <circle key={`${point.label}-${index}`} cx={x} cy={y} r="2.4"><title>{point.label}: {point.value} {unit}</title></circle>;
         })}
       </svg>
-      <p className="muted small">Dernière valeur : {points[points.length - 1]?.value} {unit}</p>
+      <p className="muted small">Dernière valeur : {current.value} {unit} · évolution : {formatSignedChange(current.value - points[points.length - 2].value)} {unit}</p>
     </article>
   );
 }
@@ -2617,6 +2664,104 @@ function DailyNutritionRings({
         );
       })}
     </section>
+  );
+}
+
+function RecipeDetailModal({
+  recipe,
+  recipeIndex,
+  assigned,
+  onClose
+}: {
+  recipe: any;
+  recipeIndex: number;
+  assigned: boolean;
+  onClose: () => void;
+}) {
+  const dialogRef = useRef<HTMLElement | null>(null);
+  const closeButtonRef = useRef<HTMLButtonElement | null>(null);
+  const previousFocusRef = useRef<HTMLElement | null>(null);
+
+  useEffect(() => {
+    previousFocusRef.current = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+    closeButtonRef.current?.focus();
+
+    function handleKeyDown(event: KeyboardEvent) {
+      if (event.key === "Escape") {
+        event.preventDefault();
+        onClose();
+        return;
+      }
+
+      if (event.key !== "Tab") return;
+      const focusable = Array.from(dialogRef.current?.querySelectorAll<HTMLElement>(
+        'button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [href]'
+      ) || []).filter((element) => element.offsetParent !== null);
+      if (!focusable.length) return;
+      const first = focusable[0];
+      const last = focusable[focusable.length - 1];
+      if (event.shiftKey && document.activeElement === first) {
+        event.preventDefault();
+        last.focus();
+      } else if (!event.shiftKey && document.activeElement === last) {
+        event.preventDefault();
+        first.focus();
+      }
+    }
+
+    document.addEventListener("keydown", handleKeyDown);
+    return () => {
+      document.removeEventListener("keydown", handleKeyDown);
+      previousFocusRef.current?.focus();
+    };
+  }, [onClose]);
+
+  const ingredients = (recipe.recipe_ingredients || []).sort(sortByPosition);
+  const steps = (recipe.recipe_steps || []).sort(sortByPosition);
+
+  return (
+    <div className="recipe-modal-layer" role="presentation">
+      <button className="recipe-modal-backdrop" type="button" onClick={onClose} aria-label="Fermer le détail de la recette" />
+      <section className="recipe-modal" ref={dialogRef} role="dialog" aria-modal="true" aria-labelledby="recipe-detail-title">
+        <header className="recipe-modal-header">
+          <div>
+            <span className="pill gold">{recipe.objective || "Recette adaptée"}</span>
+            <h2 id="recipe-detail-title">{recipe.name}</h2>
+          </div>
+          <button className="ghost recipe-modal-close" type="button" onClick={onClose} ref={closeButtonRef}>Fermer</button>
+        </header>
+        <div className="recipe-modal-layout">
+          <div className="recipe-modal-media">
+            <Image src={recipeImage(recipe, recipeIndex)} alt={recipe.image_alt || `Plat ${recipe.name}`} fill sizes="(max-width: 760px) 100vw, 38vw" />
+          </div>
+          <div className="recipe-modal-content">
+            <div className="macro-row recipe-modal-macros" aria-label="Macros de la recette">
+              <span>{recipe.calories} kcal</span>
+              <span>{recipe.protein} g protéines</span>
+              <span>{recipe.carbs} g glucides</span>
+              <span>{recipe.fat} g lipides</span>
+            </div>
+            <p className="muted">{recipe.description}</p>
+            <p className="muted small">{recipe.prep_minutes} min de préparation · {recipe.cook_minutes} min de cuisson · {difficultyLabel(recipe.difficulty)}</p>
+            {recipe.coach_tip ? <aside className="recipe-modal-tip"><strong>Repère pratique</strong><p>{recipe.coach_tip}</p></aside> : null}
+            <div className="recipe-modal-sections">
+              <section>
+                <h3>Ingrédients</h3>
+                {ingredients.length ? <ul>{ingredients.map((ingredient: any, index: number) => <li key={ingredient.id || index}>{[ingredient.quantity, ingredient.unit, ingredient.name || ingredient.ingredient].filter(Boolean).join(" ")}</li>)}</ul> : <p className="muted small">Les ingrédients détaillés ne sont pas encore renseignés.</p>}
+              </section>
+              <section>
+                <h3>Préparation</h3>
+                {steps.length ? <ol>{steps.map((step: any, index: number) => <li key={step.id || index}>{step.instruction || step.body || step.description}</li>)}</ol> : <p className="muted small">Les étapes détaillées ne sont pas encore renseignées.</p>}
+              </section>
+            </div>
+            <div className="recipe-modal-action">
+              <span className="pill">{assigned ? "Envoyée par le coach" : "Adaptée à votre objectif"}</span>
+              <RecipeMealAdder recipe={recipe} />
+            </div>
+          </div>
+        </div>
+      </section>
+    </div>
   );
 }
 
@@ -2886,70 +3031,111 @@ function WeeklyCheckinPanel({ checkin, assessment, hydrationTarget }: { checkin:
   const [shareState, shareAction, sharePending] = useActionState(updateWeeklyJournalSharingStateAction, { status: "idle", message: "" });
   const weekStart = checkin?.week_start || getCurrentWeekStart();
   const isEditable = !checkin || checkin.status === "draft";
+  const status = checkin ? weeklyCheckinStatusLabel(checkin) : "Brouillon";
+  const statusDescription = checkin?.status === "locked"
+    ? "Ce bilan est verrouillé. Il reste disponible en lecture seule."
+    : checkin?.viewed_at
+      ? "Votre coach a consulté ce bilan. Il reste disponible en lecture seule."
+      : checkin
+        ? "Ce bilan a été transmis au coach. Il reste disponible en lecture seule."
+        : "Complétez votre bilan. Vous pouvez garder un brouillon ou le transmettre au coach.";
   return (
     <section className="page-panel panel stack weekly-form-panel">
       <div>
         <h2>Bilan hebdo</h2>
-        <p className="muted">Complétez votre bilan. Vous pouvez garder un brouillon ou le transmettre au coach.</p>
-        {checkin ? <span className="pill gold">{weeklyCheckinStatusLabel(checkin)}</span> : null}
-        {!isEditable ? <p className="muted small">Ce bilan a été transmis. Il reste consultable, mais il ne peut plus être modifié.</p> : null}
+        <p className="muted">{statusDescription}</p>
+        <span className={`pill ${isEditable ? "gold" : ""}`}>{status}</span>
       </div>
-      <form id="weekly-checkin-form" className="grid" action={draftAction}>
-        <input type="hidden" name="weekStart" value={weekStart} />
-        <label className="span-3">Énergie /10 <input name="energy" type="number" min="1" max="10" defaultValue={checkin?.energy || 5} required disabled={!isEditable} /></label>
-        <label className="span-3">Stress /10 <input name="stress" type="number" min="1" max="10" defaultValue={checkin?.stress || 5} required disabled={!isEditable} /></label>
-        <label className="span-3">Sommeil (h) <input name="sleepHours" type="number" min="0" max="16" step="0.25" defaultValue={checkin?.sleep_hours || 7} required disabled={!isEditable} /></label>
-        <label className="span-3">Hydratation moyenne <input name="averageHydration" type="number" min="0" step="0.1" defaultValue={checkin?.average_hydration || hydrationTarget} required disabled={!isEditable} /></label>
-        <label className="span-6">Motivation <input name="motivation" defaultValue={checkin?.motivation || ""} disabled={!isEditable} /></label>
-        <label className="span-6">Qualite du sommeil <input name="sleepQuality" defaultValue={checkin?.sleep_quality || ""} disabled={!isEditable} /></label>
-        <label className="span-3">Sieste <input name="nap" defaultValue={checkin?.nap || ""} disabled={!isEditable} /></label>
-        <label className="span-3">Poids <input name="weightKg" type="number" min="1" step="0.1" defaultValue={checkin?.weight_kg || assessment?.weight_kg || ""} disabled={!isEditable} /></label>
-        <label className="span-3">RPE /10 <input name="trainingRpe" type="number" min="1" max="10" defaultValue={checkin?.training_rpe || 5} required disabled={!isEditable} /></label>
-        <label className="span-3">Adhérence nutrition /10 <input name="nutritionAdherence" type="number" min="1" max="10" defaultValue={checkin?.nutrition_adherence || 7} required disabled={!isEditable} /></label>
-        <label className="span-6">Douleurs <input name="pain" defaultValue={checkin?.pain || ""} disabled={!isEditable} /></label>
-        <label className="span-6">Localisation <input name="painLocation" defaultValue={checkin?.pain_location || ""} disabled={!isEditable} /></label>
-        <label className="span-6">Ressenti des entraînements <textarea name="trainingFeeling" defaultValue={checkin?.training_feeling || ""} disabled={!isEditable} /></label>
-        <label className="span-6">Fierté / réussite <textarea name="weeklyWin" defaultValue={checkin?.weekly_win || ""} disabled={!isEditable} /></label>
-        <label className="span-3">Taille <input name="waist" defaultValue={checkin?.measurements?.waist || ""} disabled={!isEditable} /></label>
-        <label className="span-3">Poitrine <input name="chest" defaultValue={checkin?.measurements?.chest || ""} disabled={!isEditable} /></label>
-        <label className="span-3">Hanches <input name="hip" defaultValue={checkin?.measurements?.hip || ""} disabled={!isEditable} /></label>
-        <label className="span-3">Autres mesures <input name="measurements" defaultValue={checkin?.measurements?.other || ""} disabled={!isEditable} /></label>
-        <label className="span-12 photo-input">Photos de progression
-          <input name="photos" type="file" accept="image/jpeg,image/png,image/webp" multiple disabled={!isEditable} />
-          <span className="muted small">{Array.isArray(checkin?.photos) && checkin.photos.length ? `${checkin.photos.length} photo(s) déjà conservée(s)` : "Formats acceptés : JPG, PNG ou WebP. Max 5 Mo par photo."}</span>
-        </label>
-        <label className="span-12">Journal privé <textarea name="privateJournal" defaultValue={checkin?.journal?.body || ""} disabled={!isEditable} /></label>
-        <label className="span-12 checkbox-line">
-          <input name="sharePrivateJournal" type="checkbox" defaultChecked={Boolean(checkin?.journal?.visible_to_coach)} disabled={!isEditable} />
-          Partager cette note privée avec mon coach
-        </label>
-        <div className="span-12 row">
-          <button className="ghost" disabled={draftPending || !isEditable}>Enregistrer le brouillon</button>
-          <button
-            className="primary"
-            formAction={submitAction}
-            disabled={submitPending || !isEditable}
-            onClick={(event) => {
-              if (!window.confirm("Transmettre ce bilan au coach ? Il ne pourra plus être modifié ensuite.")) event.preventDefault();
-            }}
-          >
-            Transmettre au coach
-          </button>
-        </div>
-      </form>
-      {!isEditable && checkin?.journal ? (
-        <form className="grid sharing-control" action={shareAction}>
-          <input type="hidden" name="weekStart" value={weekStart} />
-          <label className="span-12 checkbox-line">
-            <input name="sharePrivateJournal" type="checkbox" defaultChecked={Boolean(checkin.journal.visible_to_coach)} />
-            Partager cette note privée avec mon coach
-          </label>
-          <button className="ghost span-12" disabled={sharePending}>Mettre à jour le partage</button>
-          <ActionStatus state={sharePending ? { status: "idle", message: "Mise à jour du partage..." } : shareState} />
-        </form>
-      ) : null}
-      <ActionStatus state={draftPending ? { status: "idle", message: "Enregistrement du brouillon..." } : draftState} />
-      <ActionStatus state={submitPending ? { status: "idle", message: "Transmission au coach..." } : submitState} />
+      {isEditable ? (
+        <>
+          <form id="weekly-checkin-form" className="grid" action={draftAction}>
+            <input type="hidden" name="weekStart" value={weekStart} />
+            <label className="span-3">Énergie /10 <input name="energy" type="number" min="1" max="10" defaultValue={checkin?.energy || 5} required /></label>
+            <label className="span-3">Stress /10 <input name="stress" type="number" min="1" max="10" defaultValue={checkin?.stress || 5} required /></label>
+            <label className="span-3">Sommeil (h) <input name="sleepHours" type="number" min="0" max="16" step="0.25" defaultValue={checkin?.sleep_hours || 7} required /></label>
+            <label className="span-3">Hydratation moyenne <input name="averageHydration" type="number" min="0" step="0.1" defaultValue={checkin?.average_hydration || hydrationTarget} required /></label>
+            <label className="span-6">Motivation <input name="motivation" defaultValue={checkin?.motivation || ""} /></label>
+            <label className="span-6">Qualité du sommeil <input name="sleepQuality" defaultValue={checkin?.sleep_quality || ""} /></label>
+            <label className="span-3">Sieste <input name="nap" defaultValue={checkin?.nap || ""} /></label>
+            <label className="span-3">Poids <input name="weightKg" type="number" min="1" step="0.1" defaultValue={checkin?.weight_kg || assessment?.weight_kg || ""} /></label>
+            <label className="span-3">RPE /10 <input name="trainingRpe" type="number" min="1" max="10" defaultValue={checkin?.training_rpe || 5} required /></label>
+            <label className="span-3">Adhérence nutrition /10 <input name="nutritionAdherence" type="number" min="1" max="10" defaultValue={checkin?.nutrition_adherence || 7} required /></label>
+            <label className="span-6">Douleurs <input name="pain" defaultValue={checkin?.pain || ""} /></label>
+            <label className="span-6">Localisation <input name="painLocation" defaultValue={checkin?.pain_location || ""} /></label>
+            <label className="span-6">Ressenti des entraînements <textarea name="trainingFeeling" defaultValue={checkin?.training_feeling || ""} /></label>
+            <label className="span-6">Fierté / réussite <textarea name="weeklyWin" defaultValue={checkin?.weekly_win || ""} /></label>
+            <label className="span-3">Taille <input name="waist" defaultValue={checkin?.measurements?.waist || ""} /></label>
+            <label className="span-3">Poitrine <input name="chest" defaultValue={checkin?.measurements?.chest || ""} /></label>
+            <label className="span-3">Hanches <input name="hip" defaultValue={checkin?.measurements?.hip || ""} /></label>
+            <label className="span-3">Autres mesures <input name="measurements" defaultValue={checkin?.measurements?.other || ""} /></label>
+            <label className="span-12 photo-input">Photos de progression
+              <input name="photos" type="file" accept="image/jpeg,image/png,image/webp" multiple />
+              <span className="muted small">{Array.isArray(checkin?.photos) && checkin.photos.length ? `${checkin.photos.length} photo(s) déjà conservée(s)` : "Formats acceptés : JPG, PNG ou WebP. Max 5 Mo par photo."}</span>
+            </label>
+            <label className="span-12">Journal privé <textarea name="privateJournal" defaultValue={checkin?.journal?.body || ""} /></label>
+            <label className="span-12 checkbox-line">
+              <input name="sharePrivateJournal" type="checkbox" defaultChecked={Boolean(checkin?.journal?.visible_to_coach)} />
+              Autoriser mon coach à lire ce journal privé
+              <span className="muted small">Cette décision concerne uniquement votre journal, pas le contenu du bilan.</span>
+            </label>
+            <div className="span-12 row">
+              <button className="ghost" disabled={draftPending}>Enregistrer le brouillon</button>
+              <button
+                className="primary"
+                formAction={submitAction}
+                disabled={submitPending}
+                onClick={(event) => {
+                  if (!window.confirm("Transmettre ce bilan au coach ? Il ne pourra plus être modifié ensuite.")) event.preventDefault();
+                }}
+              >
+                Transmettre au coach
+              </button>
+            </div>
+          </form>
+          <ActionStatus state={draftPending ? { status: "idle", message: "Enregistrement du brouillon..." } : draftState} />
+          <ActionStatus state={submitPending ? { status: "idle", message: "Transmission au coach..." } : submitState} />
+        </>
+      ) : (
+        <>
+          <WeeklyCheckinReadOnly checkin={checkin} />
+          <form className="stack sharing-control" action={shareAction}>
+            <input type="hidden" name="weekStart" value={weekStart} />
+            <div>
+              <h3>Journal privé</h3>
+              <p className="muted small">Le contenu de votre journal reste distinct du bilan transmis. Vous pouvez en autoriser ou retirer l’accès au coach à tout moment.</p>
+            </div>
+            <label className="checkbox-line">
+              <input name="sharePrivateJournal" type="checkbox" defaultChecked={Boolean(checkin?.journal?.visible_to_coach)} />
+              Autoriser mon coach à lire ce journal privé
+            </label>
+            <button className="ghost" disabled={sharePending}>Mettre à jour le partage</button>
+            <ActionStatus state={sharePending ? { status: "idle", message: "Mise à jour du partage..." } : shareState} />
+          </form>
+        </>
+      )}
+    </section>
+  );
+}
+
+function WeeklyCheckinReadOnly({ checkin }: { checkin: any }) {
+  const items = [
+    ["Énergie", checkin?.energy ? `${checkin.energy}/10` : "Non renseigné"],
+    ["Stress", checkin?.stress ? `${checkin.stress}/10` : "Non renseigné"],
+    ["Sommeil", checkin?.sleep_hours ? `${checkin.sleep_hours} h` : "Non renseigné"],
+    ["Hydratation moyenne", checkin?.average_hydration ? `${checkin.average_hydration} L` : "Non renseigné"],
+    ["Poids", checkin?.weight_kg ? `${checkin.weight_kg} kg` : "Non renseigné"],
+    ["RPE", checkin?.training_rpe ? `${checkin.training_rpe}/10` : "Non renseigné"],
+    ["Adhérence nutritionnelle", checkin?.nutrition_adherence ? `${checkin.nutrition_adherence}/10` : "Non renseigné"],
+    ["Douleurs", checkin?.pain || "Aucune précision"],
+    ["Ressenti", checkin?.training_feeling || "Aucune précision"],
+    ["Fierté / réussite", checkin?.weekly_win || "Aucune précision"]
+  ];
+  return (
+    <section className="weekly-readonly" aria-label="Récapitulatif du bilan hebdomadaire">
+      <h3>Récapitulatif en lecture seule</h3>
+      <div className="weekly-readonly-grid">
+        {items.map(([label, value]) => <article key={label}><span>{label}</span><strong>{value}</strong></article>)}
+      </div>
     </section>
   );
 }
@@ -3299,6 +3485,11 @@ function trendText(current: unknown, previous: unknown) {
   const difference = Number(current || 0) - Number(previous || 0);
   if (Math.abs(difference) < 0.05) return "stable";
   return `${difference > 0 ? "+" : ""}${Math.round(difference * 10) / 10}`;
+}
+
+function formatSignedChange(value: number) {
+  const rounded = Math.round(value * 10) / 10;
+  return `${rounded > 0 ? "+" : ""}${rounded}`;
 }
 
 function auditActionLabel(action?: string) {

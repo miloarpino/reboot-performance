@@ -207,8 +207,13 @@ const appSource = readFileSync(new URL("../app/supabase-app.tsx", import.meta.ur
 const themeBlock = appSource.slice(appSource.indexOf("function ThemeSwitcher()"), appSource.indexOf("function LiveUpdateBridge"));
 assert.ok(!themeBlock.includes("<strong>"), "le bouton theme ne rend pas de libelle Clair/Sombre visible");
 assert.ok(appSource.includes("workoutCompletedSetKeys"), "l'interface lit les series terminees depuis le feedback versionne");
-assert.ok(appSource.includes("Partager cette note privée avec mon coach"), "le bilan client expose le consentement de partage du journal privé");
+assert.ok(appSource.includes("Autoriser mon coach à lire ce journal privé"), "le bilan client expose un consentement de partage du journal privé clairement libellé");
+assert.ok(!appSource.includes("Partager cette note privée avec mon coach"), "le consentement du journal hebdomadaire ne doit pas être dupliqué");
 assert.ok(appSource.includes("weeklyCheckinStatusLabel"), "les statuts de bilan hebdo sont traduits sans exposer les valeurs techniques");
+assert.ok(appSource.includes("useSearchParams"), "la navigation Athlète est synchronisée avec l'URL");
+assert.ok(appSource.includes("RecipeDetailModal"), "le détail de recette utilise une modale dédiée");
+assert.ok(appSource.includes("librarySection"), "la bibliothèque distingue les fiches express des dossiers approfondis");
+assert.ok(appSource.includes("chart-single-value"), "une donnée de progression reçoit un état compact dédié");
 
 const dataSource = readFileSync(new URL("../lib/supabase/data.ts", import.meta.url), "utf8");
 assert.ok(dataSource.includes("weekly_private_journals"), "les lectures Supabase recuperent les journaux prives separes");

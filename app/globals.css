@@ -3745,3 +3745,418 @@ textarea {
     grid-template-columns: minmax(0, 1fr);
   }
 }
+
+/* Espace Athlète : lecture rapide, sans panneaux géants ni débordement. */
+.client-app-shell .page-header {
+  min-height: clamp(108px, 10vw, 132px);
+  padding: clamp(18px, 2.4vw, 30px);
+}
+
+.client-app-shell .client-home {
+  gap: clamp(14px, 1.8vw, 20px);
+}
+
+.client-app-shell .client-welcome-card {
+  min-height: clamp(224px, 22vw, 276px);
+  grid-template-columns: minmax(0, 1.4fr) minmax(170px, 0.6fr);
+  gap: clamp(18px, 3vw, 40px);
+  padding: clamp(22px, 3.2vw, 38px);
+}
+
+.client-app-shell .client-welcome-copy {
+  gap: 10px;
+}
+
+.client-app-shell .client-welcome-copy h2 {
+  max-width: 20ch;
+  font-size: clamp(1.8rem, 3.7vw, 3.25rem);
+}
+
+.client-app-shell .weekly-score {
+  gap: 10px;
+}
+
+.client-app-shell .weekly-score-ring {
+  width: clamp(112px, 13vw, 154px);
+}
+
+.client-app-shell .client-signal-grid {
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 172px), 1fr));
+  gap: 12px;
+}
+
+.client-app-shell .dashboard-metric {
+  min-height: 104px;
+  padding: 16px;
+}
+
+.client-app-shell .week-overview,
+.client-app-shell .next-session-card,
+.client-app-shell .coach-note-card {
+  padding: clamp(18px, 2.3vw, 28px);
+}
+
+.client-app-shell .day-card {
+  min-height: 102px;
+  padding: 12px;
+}
+
+.client-app-shell .daily-ring-grid {
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 148px), 1fr));
+  gap: 10px;
+}
+
+.client-app-shell .daily-ring-card {
+  gap: 7px;
+  padding: 12px 8px;
+}
+
+.client-app-shell .daily-ring {
+  width: clamp(82px, 7vw, 106px);
+}
+
+.client-app-shell .daily-ring strong {
+  font-size: 1.05rem;
+}
+
+.client-app-shell .premium-recipe {
+  grid-template-columns: minmax(190px, 0.68fr) minmax(0, 1.32fr);
+}
+
+.client-app-shell .premium-recipe .recipe-media {
+  min-height: clamp(180px, 19vw, 258px);
+}
+
+.client-app-shell .premium-recipe > .stack {
+  gap: 10px;
+  padding: clamp(16px, 2vw, 22px);
+}
+
+.recipe-modal-layer {
+  position: fixed;
+  z-index: 120;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  padding: clamp(10px, 3vw, 42px);
+}
+
+.recipe-modal-backdrop {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  min-width: 0;
+  height: 100%;
+  border: 0;
+  border-radius: 0;
+  background: rgba(12, 10, 7, 0.64);
+  cursor: default;
+}
+
+.recipe-modal {
+  z-index: 1;
+  width: min(1080px, 100%);
+  max-height: min(860px, calc(100dvh - 20px));
+  overflow: hidden;
+  border: 1px solid var(--reboot-border);
+  border-radius: clamp(18px, 2.6vw, 28px);
+  background: var(--reboot-surface);
+  box-shadow: 0 32px 88px rgba(0, 0, 0, 0.34);
+}
+
+.recipe-modal-header {
+  min-width: 0;
+  display: flex;
+  align-items: start;
+  justify-content: space-between;
+  gap: 16px;
+  padding: clamp(18px, 2.4vw, 28px);
+  border-bottom: 1px solid var(--reboot-border);
+}
+
+.recipe-modal-header h2 {
+  margin: 8px 0 0;
+  font-size: clamp(1.55rem, 3vw, 2.45rem);
+  overflow-wrap: anywhere;
+}
+
+.recipe-modal-close {
+  flex: 0 0 auto;
+}
+
+.recipe-modal-layout {
+  display: grid;
+  grid-template-columns: minmax(260px, 0.76fr) minmax(0, 1.24fr);
+  max-height: calc(min(860px, 100dvh - 20px) - 116px);
+}
+
+.recipe-modal-media {
+  position: relative;
+  min-height: clamp(200px, 29vw, 380px);
+  background: var(--reboot-surface-2);
+}
+
+.recipe-modal-media img {
+  object-fit: cover;
+}
+
+.recipe-modal-content {
+  min-width: 0;
+  overflow-y: auto;
+  padding: clamp(18px, 2.6vw, 30px);
+}
+
+.recipe-modal-macros {
+  flex-wrap: wrap;
+}
+
+.recipe-modal-tip {
+  margin: 16px 0;
+  padding: 14px;
+  border-left: 3px solid var(--reboot-gold);
+  border-radius: 0 12px 12px 0;
+  background: var(--reboot-gold-soft);
+}
+
+.recipe-modal-tip p {
+  margin-bottom: 0;
+}
+
+.recipe-modal-sections {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 18px;
+}
+
+.recipe-modal-sections h3 {
+  margin-top: 0;
+}
+
+.recipe-modal-sections ul,
+.recipe-modal-sections ol {
+  padding-left: 20px;
+}
+
+.recipe-modal-sections li {
+  margin: 8px 0;
+}
+
+.recipe-modal-action {
+  position: sticky;
+  bottom: -1px;
+  display: grid;
+  gap: 10px;
+  margin-top: 18px;
+  padding-top: 14px;
+  background: linear-gradient(180deg, color-mix(in srgb, var(--reboot-surface) 78%, transparent), var(--reboot-surface) 20%);
+}
+
+.client-app-shell .weekly-readonly,
+.client-app-shell .sharing-control {
+  display: grid;
+  gap: 14px;
+  padding: clamp(16px, 2.4vw, 24px);
+  border: 1px solid var(--reboot-border);
+  border-radius: 18px;
+  background: var(--reboot-surface-2);
+}
+
+.client-app-shell .weekly-readonly h3,
+.client-app-shell .sharing-control h3 {
+  margin: 0;
+}
+
+.client-app-shell .weekly-readonly-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 170px), 1fr));
+  gap: 10px;
+}
+
+.client-app-shell .weekly-readonly-grid article {
+  min-width: 0;
+  display: grid;
+  gap: 5px;
+  padding: 12px;
+  border: 1px solid var(--reboot-border);
+  border-radius: 13px;
+  background: var(--reboot-surface);
+}
+
+.client-app-shell .weekly-readonly-grid span {
+  color: var(--reboot-muted);
+  font-size: 0.78rem;
+}
+
+.client-app-shell .weekly-readonly-grid strong {
+  overflow-wrap: anywhere;
+}
+
+.client-app-shell .progress-grid {
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 230px), 1fr));
+  gap: 14px;
+}
+
+.client-app-shell .chart-card {
+  min-height: 0;
+  gap: 10px;
+  padding: 18px;
+}
+
+.client-app-shell .real-chart {
+  height: 148px;
+}
+
+.client-app-shell .bar-chart {
+  min-height: 132px;
+  padding-top: 8px;
+}
+
+.client-app-shell .bar-chart-column {
+  height: 112px;
+}
+
+.client-app-shell .chart-single-value {
+  align-content: center;
+  min-height: 146px;
+}
+
+.client-app-shell .chart-single-value > strong {
+  font-family: var(--reboot-font-display);
+  font-size: clamp(2rem, 4vw, 3.2rem);
+}
+
+.client-app-shell .next-badge {
+  display: grid;
+  gap: 7px;
+  padding: 14px;
+  border: 1px solid color-mix(in srgb, var(--reboot-gold) 45%, var(--reboot-border));
+  border-radius: 15px;
+  background: var(--reboot-gold-soft);
+}
+
+.client-app-shell .badge-catalog-item.unlocked {
+  border-color: color-mix(in srgb, var(--reboot-success) 52%, var(--reboot-border));
+}
+
+.client-app-shell .badge-catalog-item.locked {
+  background: color-mix(in srgb, var(--reboot-surface-2) 80%, transparent);
+  opacity: 0.86;
+}
+
+.client-app-shell .badge-catalog-item.locked .badge-icon {
+  filter: grayscale(0.8);
+}
+
+.client-app-shell .games-menu-grid {
+  gap: 14px;
+}
+
+.client-app-shell .game-menu-media {
+  aspect-ratio: 16 / 7;
+}
+
+.client-app-shell .game-menu-card > .stack {
+  gap: 10px;
+  padding: 16px;
+}
+
+.client-app-shell .game-focus-banner {
+  min-height: clamp(118px, 16vw, 184px);
+}
+
+.client-app-shell .library-section-tabs {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.client-app-shell .library-section-tabs button {
+  min-width: 0;
+  padding: 12px 14px;
+  border: 1px solid var(--reboot-border);
+  border-radius: 13px;
+  background: var(--reboot-surface-2);
+  color: var(--reboot-text);
+  font-weight: 750;
+}
+
+.client-app-shell .library-section-tabs button.active {
+  border-color: var(--reboot-gold);
+  background: var(--reboot-gold-soft);
+  color: var(--reboot-text);
+}
+
+.client-app-shell .library-card {
+  min-height: 0;
+}
+
+.client-app-shell .library-reader-hero {
+  min-height: clamp(210px, 28vw, 360px);
+}
+
+@media (max-width: 980px) {
+  .client-app-shell .client-welcome-card,
+  .client-app-shell .client-home-bottom,
+  .client-app-shell .premium-recipe,
+  .recipe-modal-layout {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .client-app-shell .premium-recipe .recipe-media {
+    min-height: 190px;
+  }
+
+  .recipe-modal-layout {
+    overflow-y: auto;
+  }
+
+  .recipe-modal-media {
+    min-height: 190px;
+    max-height: 240px;
+  }
+
+  .recipe-modal-content {
+    overflow: visible;
+  }
+}
+
+@media (max-width: 760px) {
+  .client-app-shell .client-signal-grid,
+  .client-app-shell .weekly-readonly-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .client-app-shell .daily-ring-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .client-app-shell .recipe-modal-header {
+    padding: 16px;
+  }
+
+  .recipe-modal-layout {
+    max-height: calc(min(860px, 100dvh - 20px) - 98px);
+  }
+
+  .recipe-modal-sections {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 8px;
+  }
+}
+
+@media (max-width: 390px) {
+  .client-app-shell .client-signal-grid,
+  .client-app-shell .weekly-readonly-grid,
+  .client-app-shell .daily-ring-grid,
+  .client-app-shell .library-section-tabs {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .client-app-shell .daily-ring-card {
+    grid-template-columns: 82px minmax(0, 1fr);
+  }
+
+  .client-app-shell .recipe-modal-close {
+    padding-inline: 11px;
+  }
+}

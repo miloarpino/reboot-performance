@@ -10,6 +10,7 @@ const responsiveWidths = [320, 390, 700, 1024, 1280, 1440, 1920];
 const coachContentTabs = ["Vue d'ensemble", "Programmes", "Nutrition et recettes", "Bibliothèque", "Tribu", "Badges", "Jeux et quiz"];
 const coachDossierTabs = ["Vue d'ensemble", "Bilan", "Entraînement", "Nutrition", "Progrès", "Messages", "Médias", "Historique"];
 const clientNavigationItems = ["Accueil", "Séance active", "Coin diététique", "Bilan hebdo", "Mes progrès", "Tribu & Badges", "Jeux & Quiz", "Bibliothèque"];
+const clientViewportWidths = [320, 375, 390, 430, 700, 768, 900, 1024, 1280, 1440, 1920];
 const publicRecoveryTestTitle = "récupération de mot de passe : parcours public et liens invalides";
 
 test.beforeEach(({}, testInfo) => {
@@ -399,7 +400,7 @@ test("parcours client: dashboard, nutrition, recettes, programme, messages et se
   await expect(page.getByRole("button", { name: "Confirmer la fin" })).toBeVisible();
   await page.getByRole("button", { name: "Bilan hebdo" }).click();
   await expect(page.getByRole("button", { name: "Enregistrer le brouillon" })).toBeVisible();
-  await expect(page.getByLabel("Partager cette note privée avec mon coach")).toBeVisible();
+  await expect(page.getByLabel(/Autoriser mon coach à lire ce journal privé/)).toBeVisible();
   await page.getByRole("button", { name: "Mes progrès" }).click();
   await expect(page.getByRole("heading", { name: "Mes progrès", level: 2 })).toBeVisible();
   await page.getByLabel("Période des graphiques").selectOption("90d");
@@ -426,6 +427,55 @@ test("parcours client: dashboard, nutrition, recettes, programme, messages et se
   await page.goto("/coach");
   await expect(page).toHaveURL(/\/client/);
   await logout(page);
+});
+
+test("espace Athlète : navigation persistante, recette accessible et rendu compact", async ({ page }) => {
+  test.setTimeout(300_000);
+  await login(page, clientEmail);
+
+  for (const width of clientViewportWidths) {
+    await page.setViewportSize({ width, height: 900 });
+    for (const item of clientNavigationItems) {
+      await openNavigationItem(page, item, width);
+      await expectResponsiveLayout(page, `Athlète · ${item} · ${width}px`);
+    }
+  }
+
+  await page.setViewportSize({ width: 390, height: 900 });
+  await openNavigationItem(page, "Coin diététique", 390);
+  await expect(page).toHaveURL(/\/client\?section=nutrition/);
+  await page.reload();
+  await expect(page.getByRole("heading", { name: "Coin diététique", level: 1 })).toBeVisible();
+
+  const recipeTrigger = page.getByRole("button", { name: "Voir la recette" }).first();
+  await expect(recipeTrigger).toBeVisible();
+  await recipeTrigger.click();
+  const recipeDialog = page.getByRole("dialog");
+  await expect(recipeDialog).toBeVisible();
+  await expect(recipeDialog.getByRole("heading", { name: "Ingrédients" })).toBeVisible();
+  await expect(recipeDialog.getByRole("heading", { name: "Préparation" })).toBeVisible();
+  await expect(recipeDialog.getByText("Ajouter à mes repas du jour")).toBeVisible();
+  await expectNoHorizontalScroll(page);
+  await page.keyboard.press("Escape");
+  await expect(recipeDialog).toHaveCount(0);
+  await expect(recipeTrigger).toBeFocused();
+
+  await openNavigationItem(page, "Bilan hebdo", 390);
+  await expect(page.getByLabel(/Autoriser mon coach à lire ce journal privé/)).toHaveCount(1);
+
+  await openNavigationItem(page, "Bibliothèque", 390);
+  const libraryTabs = page.getByRole("tablist", { name: "Format de contenu" });
+  await expect(libraryTabs.getByRole("tab", { name: "Fiches express" })).toHaveAttribute("aria-selected", "true");
+  await libraryTabs.getByRole("tab", { name: "Dossiers approfondis" }).click();
+  await expect(libraryTabs.getByRole("tab", { name: "Dossiers approfondis" })).toHaveAttribute("aria-selected", "true");
+
+  const themeToggle = page.getByRole("button", { name: /Passer en mode/ });
+  const initialTheme = await page.locator("html").getAttribute("data-theme");
+  await themeToggle.click();
+  const selectedTheme = await page.locator("html").getAttribute("data-theme");
+  expect(selectedTheme).not.toBe(initialTheme);
+  await page.reload();
+  await expect(page.locator("html")).toHaveAttribute("data-theme", selectedTheme || "dark");
 });
 
 test("PWA et detection douce de nouvelle version", async ({ page }) => {
