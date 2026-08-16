@@ -16,6 +16,7 @@
     "supabase:smoke": "node scripts/supabase-smoke-test.mjs",
     "supabase:phase4": "node scripts/supabase-phase4-test.mjs",
     "supabase:phase5": "node scripts/supabase-phase5-test.mjs",
+    "supabase:phase8": "node scripts/supabase-phase8-client-tracking-test.mjs",
     "supabase:realtime": "node scripts/supabase-realtime-test.mjs"
   },
   "dependencies": {

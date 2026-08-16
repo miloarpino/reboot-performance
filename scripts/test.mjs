@@ -189,4 +189,74 @@ assert.ok(supabaseServerSource.includes("cookieStore.getAll()"), "Supabase SSR c
 assert.ok(supabaseServerSource.includes("Cookies can only be modified in a Server Action or Route Handler"), "Supabase SSR ignore uniquement l'erreur cookie Server Component");
 assert.ok(supabaseServerSource.includes("throw error;"), "Supabase SSR ne masque pas les autres erreurs cookie");
 
+const serverActionsSource = readFileSync(new URL("../app/actions.ts", import.meta.url), "utf8");
+for (const actionName of ["updateAssessmentAction", "assignWorkoutAction", "updateNutritionAction", "createAiRecommendationAction"]) {
+  const actionBlock = serverActionsSource.slice(
+    serverActionsSource.indexOf(`export async function ${actionName}`),
+    serverActionsSource.indexOf("export async function", serverActionsSource.indexOf(`export async function ${actionName}`) + 1)
+  );
+  assert.ok(actionBlock.includes("await requireCoachClient"), `${actionName} verifie le rattachement coach-client avant mutation`);
+}
+assert.ok(serverActionsSource.includes("reboot_session_v1"), "le feedback de seance utilise une structure versionnee");
+assert.ok(serverActionsSource.includes("weekly_private_journals"), "le journal prive hebdo est enregistre dans weekly_private_journals");
+assert.ok(!serverActionsSource.includes("private_journal:"), "weekly_checkins ne doit plus recevoir private_journal");
+assert.ok(serverActionsSource.includes("${clientId}/${checkinId}/"), "les photos hebdo utilisent le chemin client_id/checkin_id/fichier");
+assert.ok(serverActionsSource.includes("weekly_private_journal.visibility_updated"), "le consentement de partage du journal est modifiable sans modifier le bilan");
+
+const appSource = readFileSync(new URL("../app/supabase-app.tsx", import.meta.url), "utf8");
+const themeBlock = appSource.slice(appSource.indexOf("function ThemeSwitcher()"), appSource.indexOf("function LiveUpdateBridge"));
+assert.ok(!themeBlock.includes("<strong>"), "le bouton theme ne rend pas de libelle Clair/Sombre visible");
+assert.ok(appSource.includes("workoutCompletedSetKeys"), "l'interface lit les series terminees depuis le feedback versionne");
+assert.ok(appSource.includes("Autoriser mon coach à lire ce journal privé"), "le bilan client expose un consentement de partage du journal privé clairement libellé");
+assert.ok(!appSource.includes("Partager cette note privée avec mon coach"), "le consentement du journal hebdomadaire ne doit pas être dupliqué");
+assert.ok(appSource.includes("weeklyCheckinStatusLabel"), "les statuts de bilan hebdo sont traduits sans exposer les valeurs techniques");
+assert.ok(appSource.includes("useSearchParams"), "la navigation Athlète est synchronisée avec l'URL");
+assert.ok(appSource.includes("RecipeDetailModal"), "le détail de recette utilise une modale dédiée");
+assert.ok(appSource.includes("librarySection"), "la bibliothèque distingue les fiches express des dossiers approfondis");
+assert.ok(appSource.includes("chart-single-value"), "une donnée de progression reçoit un état compact dédié");
+
+const dataSource = readFileSync(new URL("../lib/supabase/data.ts", import.meta.url), "utf8");
+assert.ok(dataSource.includes("weekly_private_journals"), "les lectures Supabase recuperent les journaux prives separes");
+assert.ok(dataSource.includes("createSignedUrl"), "les photos de bilan sont lues via URL signee");
+
+const phase8Source = readFileSync(new URL("../scripts/supabase-phase8-client-tracking-test.mjs", import.meta.url), "utf8");
+assert.ok(phase8Source.includes("ALLOW_REMOTE_RLS_TESTS"), "le test Phase 8 refuse les mutations distantes sans autorisation explicite");
+assert.ok(phase8Source.includes("finally"), "le test Phase 8 garantit un nettoyage meme en cas d'echec");
+
+const loginSource = readFileSync(new URL("../app/supabase-app.tsx", import.meta.url), "utf8");
+assert.ok(loginSource.includes("Mot de passe oublié ?"), "la connexion expose un lien de récupération visible");
+assert.ok(loginSource.includes("Mot de passe modifié. Vous pouvez vous connecter."), "la connexion confirme une modification réussie");
+
+const forgotPasswordActionSource = readFileSync(new URL("../app/forgot-password/actions.ts", import.meta.url), "utf8");
+assert.ok(forgotPasswordActionSource.includes("resetPasswordForEmail"), "la demande de récupération utilise Supabase Auth");
+assert.ok(forgotPasswordActionSource.includes("Si cette adresse est associée à un compte"), "la demande de récupération garde une réponse générique");
+assert.ok(!forgotPasswordActionSource.includes("SUPABASE_SERVICE_ROLE_KEY"), "la demande publique ne charge aucune clé de service");
+
+const recoveryCallbackSource = readFileSync(new URL("../app/auth/callback/route.ts", import.meta.url), "utf8");
+assert.ok(recoveryCallbackSource.includes("exchangeCodeForSession"), "le callback échange le code PKCE contre une session");
+assert.ok(recoveryCallbackSource.includes('flow !== "recovery"'), "le callback refuse les flux non-récupération");
+assert.ok(recoveryCallbackSource.includes('Cache-Control", "private, no-store'), "le callback interdit la mise en cache des cookies Auth");
+assert.ok(!recoveryCallbackSource.includes("SUPABASE_SERVICE_ROLE_KEY"), "le callback PKCE n'expose pas de clé de service");
+
+const resetPasswordActionSource = readFileSync(new URL("../app/reset-password/actions.ts", import.meta.url), "utf8");
+assert.ok(resetPasswordActionSource.includes("isValidPasswordRecoveryCookie"), "la modification exige une session de récupération valide");
+assert.ok(resetPasswordActionSource.includes('updateUser({ password })'), "la modification utilise uniquement la session de récupération");
+assert.ok(resetPasswordActionSource.includes('signOut({ scope: "global" })'), "la modification révoque les sessions actives");
+assert.ok(!resetPasswordActionSource.includes("SUPABASE_SERVICE_ROLE_KEY"), "la modification de mot de passe n'utilise pas de clé de service");
+
+const responsiveCssSource = readFileSync(new URL("../app/globals.css", import.meta.url), "utf8");
+const responsiveAuditCss = responsiveCssSource.slice(responsiveCssSource.indexOf("/* Responsive audit:"));
+assert.ok(responsiveCssSource.includes(".span-7 { grid-column: span 7; }"), "les panneaux sur sept colonnes occupent réellement leur largeur");
+assert.ok(responsiveAuditCss.includes("max-width: none"), "le contenu utilise toute la largeur disponible sur grand écran");
+assert.ok(responsiveAuditCss.includes(".coach-content-hub > .grid"), "les panneaux éditoriaux ont une grille responsive dédiée");
+assert.ok(responsiveAuditCss.includes("grid-template-columns: repeat(3, minmax(0, 1fr))"), "les onglets Contenu passent en grille sans rail horizontal");
+assert.ok(responsiveAuditCss.includes(".client-dossier > .tabs"), "les onglets de dossier coach restent sans débordement sur mobile");
+assert.ok(responsiveAuditCss.includes(".week-calendar"), "le calendrier client abandonne le rail horizontal sur petits écrans");
+
+const responsiveE2eSource = readFileSync(new URL("../tests/e2e/reboot-phase6.spec.ts", import.meta.url), "utf8");
+assert.ok(responsiveE2eSource.includes("[320, 390, 700, 1024, 1280, 1440, 1920]"), "les sept largeurs de référence sont couvertes");
+assert.ok(responsiveE2eSource.includes("audit responsive complet Coach et Client"), "les espaces Coach et Client sont audités en une session par rôle");
+assert.ok(responsiveE2eSource.includes("E2E_AUTH_PASSWORD"), "les E2E authentifiés exigent un secret injecté explicitement");
+assert.ok(!responsiveE2eSource.includes("readLocalEnv"), "les E2E n'extraient aucun mot de passe depuis un fichier local");
+
 console.log("Tests Phase 3 OK: audit local, Corner Cuisine personnalise, profils perte/masse/maintien, allergies, recherche, favoris et detail.");
